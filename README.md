@@ -8,7 +8,7 @@
 
 - **Console Panel** — Hook `console.log/info/warn/error/debug` with color coding, stack traces, virtual list rendering for 10,000+ logs, search/filter, export
 - **AI Streaming Logs** — First-class support for SSE and streaming JSON output with buffered real-time UI updates
-- **Network Panel** — Intercept `fetch`, `XMLHttpRequest`, and `EventSource` (SSE) with sortable table, request/response detail, timing
+- **Network Panel** — Intercept `fetch`, `XMLHttpRequest`, `EventSource` (SSE), and `WebSocket` with sortable table, request/response detail, timing, and **real-time message stream** for SSE/WebSocket (like browser DevTools Messages tab)
 - **Storage Panel** — View/edit/delete `localStorage`, `sessionStorage`, and cookies with search and inline editing
 - **Element Panel** — Collapsible DOM tree viewer with hover-to-highlight
 - **System Panel** — UA, screen, device memory, network type, performance metrics (FP, FCP, heap)
@@ -87,10 +87,11 @@ interface NextConsoleConfig {
   };
   /** Network options */
   network?: {
-    maxRequests?: number;  // default: 500
-    hookFetch?: boolean;   // default: true
-    hookXHR?: boolean;     // default: true
-    hookSSE?: boolean;     // default: true
+    maxRequests?: number;      // default: 500
+    hookFetch?: boolean;       // default: true
+    hookXHR?: boolean;         // default: true
+    hookSSE?: boolean;         // default: true
+    hookWebSocket?: boolean;   // default: true
   };
   /** Storage options */
   storage?: {
@@ -129,6 +130,9 @@ npm install
 # Start dev server with demo
 npx vite examples
 
+# Start SSE/WebSocket test server (port 3210)
+node examples/server.js
+
 # Build for production
 npm run build
 
@@ -136,13 +140,18 @@ npm run build
 npm run typecheck
 ```
 
+The test server provides:
+- `GET /sse` — SSE endpoint with 8 named event types (connected, user_login, order_created, etc.)
+- `GET /sse/ai` — AI-style streaming text (char by char)
+- `ws://localhost:3210/ws` — WebSocket with push messages, echo, ping, and get_users handlers
+
 ## Project Structure
 
 ```
 src/
 ├── core/              # Core interceptor logic
 │   ├── console-core.ts    # Console hooking & streaming
-│   ├── network-core.ts    # Fetch/XHR/SSE interception
+│   ├── network-core.ts    # Fetch/XHR/SSE/WebSocket interception
 │   ├── storage-core.ts    # Storage read/write
 │   ├── element-core.ts    # DOM tree & highlight
 │   └── system-core.ts     # System info collection

@@ -1,4 +1,4 @@
-import type { NetworkEntry, NetworkOptions, SSEEvent } from '../types';
+import type { NetworkEntry, NetworkOptions, SSEEvent, StreamMessage } from '../types';
 import { EventEmitter } from '../utils/event-emitter';
 import { nextId } from '../utils/time';
 
@@ -13,6 +13,7 @@ const DEFAULT_OPTIONS: NetworkOptions = {
   hookFetch: true,
   hookXHR: true,
   hookSSE: true,
+  hookWebSocket: true,
 };
 
 /**
@@ -26,6 +27,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
   private originalXHR: typeof XMLHttpRequest.prototype.open | null = null;
   private originalXHRSend: typeof XMLHttpRequest.prototype.send | null = null;
   private originalEventSource: typeof EventSource | null = null;
+  private originalWebSocket: typeof WebSocket | null = null;
   private hooked = false;
 
   constructor(options?: Partial<NetworkOptions>) {
@@ -38,6 +40,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
     if (this.options.hookFetch) this.hookFetch();
     if (this.options.hookXHR) this.hookXHR();
     if (this.options.hookSSE) this.hookSSE();
+    if (this.options.hookWebSocket) this.hookWebSocket();
     this.hooked = true;
   }
 
@@ -237,6 +240,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
         duration: 0,
         pending: true,
         sseEvents: [],
+        messages: [],
       };
 
       self.addEntry(entry);
@@ -246,6 +250,41 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
         self.emit('update', entry);
       });
 
+      // Capture all messages (including named events via onmessage)
+      const origAddEventListener = es.addEventListener.bind(es);
+      (es as any).addEventListener = function (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+        if (type !== 'open' && type !== 'error') {
+          // Wrap to capture named events
+          const wrappedListener = function (e: Event) {
+            const me = e as MessageEvent;
+            const sseEvent: SSEEvent = {
+              data: me.data,
+              timestamp: Date.now(),
+              id: me.lastEventId || undefined,
+              event: type === 'message' ? undefined : type,
+            };
+            entry.sseEvents!.push(sseEvent);
+            const msg: StreamMessage = {
+              direction: 'in',
+              data: me.data,
+              timestamp: Date.now(),
+              event: type === 'message' ? undefined : type,
+              size: typeof me.data === 'string' ? me.data.length : 0,
+            };
+            entry.messages!.push(msg);
+            self.emit('update', entry);
+
+            if (typeof listener === 'function') {
+              listener.call(es, e);
+            } else {
+              listener.handleEvent(e);
+            }
+          };
+          return origAddEventListener(type, wrappedListener as EventListener, options);
+        }
+        return origAddEventListener(type, listener, options);
+      };
+
       es.addEventListener('message', ((e: MessageEvent) => {
         const sseEvent: SSEEvent = {
           data: e.data,
@@ -253,6 +292,13 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
           id: e.lastEventId || undefined,
         };
         entry.sseEvents!.push(sseEvent);
+        const msg: StreamMessage = {
+          direction: 'in',
+          data: e.data,
+          timestamp: Date.now(),
+          size: typeof e.data === 'string' ? e.data.length : 0,
+        };
+        entry.messages!.push(msg);
         self.emit('update', entry);
       }) as EventListener);
 
@@ -275,6 +321,97 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
     });
 
     (window as any).EventSource = ProxiedES;
+  }
+
+  private hookWebSocket(): void {
+    if (typeof WebSocket === 'undefined') return;
+    const self = this;
+    const OrigWS = WebSocket;
+    this.originalWebSocket = OrigWS;
+
+    const ProxiedWS = function (this: WebSocket, url: string | URL, protocols?: string | string[]) {
+      const ws = new OrigWS(url, protocols);
+      const entry: NetworkEntry = {
+        id: nextId(),
+        type: 'websocket',
+        method: 'WS',
+        url: String(url),
+        requestHeaders: {},
+        requestBody: null,
+        status: 0,
+        statusText: 'WebSocket',
+        responseHeaders: {},
+        responseBody: null,
+        startTime: performance.now(),
+        endTime: 0,
+        duration: 0,
+        pending: true,
+        messages: [],
+      };
+
+      self.addEntry(entry);
+
+      ws.addEventListener('open', () => {
+        entry.status = 101;
+        entry.statusText = 'Switching Protocols';
+        self.emit('update', entry);
+      });
+
+      ws.addEventListener('message', (e: MessageEvent) => {
+        const data = typeof e.data === 'string' ? e.data : '[Binary]';
+        const msg: StreamMessage = {
+          direction: 'in',
+          data,
+          timestamp: Date.now(),
+          size: typeof e.data === 'string' ? e.data.length : (e.data as ArrayBuffer)?.byteLength || 0,
+        };
+        entry.messages!.push(msg);
+        self.emit('update', entry);
+      });
+
+      ws.addEventListener('close', (e: CloseEvent) => {
+        entry.pending = false;
+        entry.endTime = performance.now();
+        entry.duration = entry.endTime - entry.startTime;
+        entry.statusText = `Closed (${e.code})`;
+        self.emit('update', entry);
+      });
+
+      ws.addEventListener('error', () => {
+        entry.pending = false;
+        entry.endTime = performance.now();
+        entry.duration = entry.endTime - entry.startTime;
+        entry.error = 'WebSocket Error';
+        self.emit('update', entry);
+      });
+
+      // Hook send to capture outgoing messages
+      const origSend = ws.send.bind(ws);
+      ws.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+        const text = typeof data === 'string' ? data : '[Binary]';
+        const msg: StreamMessage = {
+          direction: 'out',
+          data: text,
+          timestamp: Date.now(),
+          size: typeof data === 'string' ? data.length : (data as ArrayBuffer)?.byteLength || 0,
+        };
+        entry.messages!.push(msg);
+        self.emit('update', entry);
+        return origSend(data);
+      };
+
+      return ws;
+    } as unknown as typeof WebSocket;
+
+    Object.defineProperties(ProxiedWS, {
+      CONNECTING: { value: OrigWS.CONNECTING },
+      OPEN: { value: OrigWS.OPEN },
+      CLOSING: { value: OrigWS.CLOSING },
+      CLOSED: { value: OrigWS.CLOSED },
+      prototype: { value: OrigWS.prototype },
+    });
+
+    (window as any).WebSocket = ProxiedWS;
   }
 
   private addEntry(entry: NetworkEntry): void {
@@ -308,6 +445,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
     }
     if (this.originalEventSource) {
       (window as any).EventSource = this.originalEventSource;
+    }
+    if (this.originalWebSocket) {
+      (window as any).WebSocket = this.originalWebSocket;
     }
 
     this.hooked = false;

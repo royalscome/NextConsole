@@ -1,4 +1,4 @@
-import type { NetworkEntry } from '../types';
+import type { NetworkEntry, StreamMessage } from '../types';
 import type { NetworkCore } from '../core/network-core';
 import { formatDuration, formatTime } from '../utils/time';
 import { highlightJSON } from '../utils/json';
@@ -144,13 +144,14 @@ export class NetworkPanel {
       const statusClass = entry.pending ? 'nc-status-pending' : entry.status >= 400 ? 'nc-status-err' : 'nc-status-ok';
       const statusText = entry.pending ? '⏳' : String(entry.status);
       const shortUrl = entry.url.length > 80 ? entry.url.slice(0, 80) + '…' : entry.url;
+      const msgCount = entry.messages && entry.messages.length > 0 ? ` (${entry.messages.length})` : '';
 
       html += `<tr data-nc-req-id="${entry.id}">`;
       html += `<td>${escapeHTML(entry.method)}</td>`;
       html += `<td title="${escapeHTML(entry.url)}">${escapeHTML(shortUrl)}</td>`;
       html += `<td class="${statusClass}">${statusText}</td>`;
-      html += `<td>${entry.type}</td>`;
-      html += `<td>${entry.pending ? '-' : formatDuration(entry.duration)}</td>`;
+      html += `<td>${entry.type}${msgCount}</td>`;
+      html += `<td>${entry.pending ? (entry.type === 'sse' || entry.type === 'websocket' ? '●' : '-') : formatDuration(entry.duration)}</td>`;
       html += `</tr>`;
     }
 
@@ -177,9 +178,35 @@ export class NetworkPanel {
     html += `Method: ${entry.method}\n`;
     html += `Status: ${entry.status} ${escapeHTML(entry.statusText)}\n`;
     html += `Type: ${entry.type}\n`;
-    html += `Duration: ${formatDuration(entry.duration)}\n`;
+    html += `Duration: ${entry.pending ? 'pending...' : formatDuration(entry.duration)}\n`;
+    if (entry.messages) html += `Messages: ${entry.messages.length}\n`;
     if (entry.error) html += `Error: ${escapeHTML(entry.error)}\n`;
     html += `</div></div>`;
+
+    // Messages stream (SSE / WebSocket)
+    if (entry.messages && entry.messages.length > 0) {
+      html += `<div class="nc-detail-section">`;
+      html += `<div class="nc-detail-title">Messages (${entry.messages.length})${entry.pending ? ' · <span style="color:#3dc9b0">● Live</span>' : ''}</div>`;
+      html += `<div class="nc-detail-body nc-messages-stream">`;
+      const recent = entry.messages.slice(-100);
+      if (entry.messages.length > 100) {
+        html += `<div class="nc-msg-row nc-msg-info">... ${entry.messages.length - 100} earlier messages hidden</div>`;
+      }
+      for (const msg of recent) {
+        const dirClass = msg.direction === 'out' ? 'nc-msg-out' : 'nc-msg-in';
+        const arrow = msg.direction === 'out' ? '↑' : '↓';
+        const sizeStr = msg.size != null ? ` · ${this.formatSize(msg.size)}` : '';
+        const evtStr = msg.event ? ` [${escapeHTML(msg.event)}]` : '';
+        html += `<div class="nc-msg-row ${dirClass}">`;
+        html += `<span class="nc-msg-arrow">${arrow}</span>`;
+        html += `<span class="nc-msg-time">${formatTime(msg.timestamp)}</span>`;
+        html += `<span class="nc-msg-event">${evtStr}</span>`;
+        html += `<span class="nc-msg-data">${this.formatMsgData(msg.data)}</span>`;
+        html += `<span class="nc-msg-size">${sizeStr}</span>`;
+        html += `</div>`;
+      }
+      html += `</div></div>`;
+    }
 
     // Request Headers
     html += this.renderHeaders('Request Headers', entry.requestHeaders);
@@ -203,26 +230,27 @@ export class NetworkPanel {
       html += `</div>`;
     }
 
-    // SSE Events
-    if (entry.sseEvents && entry.sseEvents.length > 0) {
-      html += `<div class="nc-detail-section">`;
-      html += `<div class="nc-detail-title">SSE Events (${entry.sseEvents.length})</div>`;
-      html += `<div class="nc-detail-body">`;
-      const recent = entry.sseEvents.slice(-50);
-      for (const evt of recent) {
-        html += `<div style="margin-bottom:4px">`;
-        html += `<span style="color:#666">${formatTime(evt.timestamp)}</span> `;
-        if (evt.event) html += `[${escapeHTML(evt.event)}] `;
-        html += highlightJSON(evt.data);
-        html += `</div>`;
-      }
-      if (entry.sseEvents.length > 50) {
-        html += `<div style="color:#666">...${entry.sseEvents.length - 50} earlier events hidden</div>`;
-      }
-      html += `</div></div>`;
-    }
-
     this.detailEl.innerHTML = html;
+
+    // Auto-scroll messages to bottom
+    const msgStream = this.detailEl.querySelector('.nc-messages-stream');
+    if (msgStream) {
+      msgStream.scrollTop = msgStream.scrollHeight;
+    }
+  }
+
+  private formatMsgData(data: string): string {
+    try {
+      const parsed = JSON.parse(data);
+      return highlightJSON(parsed);
+    } catch {
+      return escapeHTML(data);
+    }
+  }
+
+  private formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
 
   private renderHeaders(title: string, headers: Record<string, string>): string {

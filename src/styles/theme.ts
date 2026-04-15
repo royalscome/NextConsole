@@ -313,12 +313,68 @@ export const THEME_CSS = `
   word-break: break-all;
 }
 
+/* Messages Stream (SSE/WebSocket) */
+.nc-messages-stream {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0 !important;
+  white-space: normal !important;
+}
+.nc-msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--nc-border);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.nc-msg-row:hover {
+  background: var(--nc-bg-hover);
+}
+.nc-msg-out {
+  color: #e07b39;
+}
+.nc-msg-in {
+  color: #3dc9b0;
+}
+.nc-msg-info {
+  color: var(--nc-text-secondary);
+  font-style: italic;
+  justify-content: center;
+}
+.nc-msg-arrow {
+  flex-shrink: 0;
+  font-weight: bold;
+  width: 12px;
+}
+.nc-msg-time {
+  flex-shrink: 0;
+  color: var(--nc-text-secondary);
+  font-size: 10px;
+  min-width: 70px;
+}
+.nc-msg-event {
+  flex-shrink: 0;
+  color: #a78bfa;
+  font-size: 10px;
+}
+.nc-msg-data {
+  flex: 1;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.nc-msg-size {
+  flex-shrink: 0;
+  color: var(--nc-text-secondary);
+  font-size: 10px;
+}
+
 /* Storage Panel */
 .nc-storage-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
-  table-layout: fixed;
 }
 .nc-storage-table th {
   position: sticky;
@@ -336,10 +392,38 @@ export const THEME_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 300px;
+}
+.nc-storage-table td.nc-storage-type {
+  white-space: nowrap;
+  overflow: visible;
+}
+.nc-storage-table td:last-child {
+  overflow: visible;
+  white-space: nowrap;
+  width: 1%;
 }
 .nc-storage-table tr:hover td {
   background: var(--nc-bg-hover);
+}
+.nc-storage-table tr:hover td:last-child {
+  background: transparent;
+}
+.nc-storage-table tr.nc-storage-expanded td {
+  border-bottom: none;
+}
+.nc-storage-detail {
+  background: var(--nc-bg-secondary);
+  border-bottom: 1px solid var(--nc-border);
+}
+.nc-storage-detail td {
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-width: none;
+  overflow: visible;
+  color: var(--nc-text);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .nc-storage-actions {
   display: flex;
@@ -347,13 +431,15 @@ export const THEME_CSS = `
 }
 .nc-storage-actions button {
   padding: 1px 6px;
-  background: transparent;
+  background: var(--nc-bg);
   border: 1px solid var(--nc-border);
   color: var(--nc-text-secondary);
   cursor: pointer;
   border-radius: 2px;
   font-size: 10px;
   font-family: var(--nc-font);
+  position: relative;
+  z-index: 1;
 }
 .nc-storage-actions button:hover {
   background: var(--nc-bg-hover);

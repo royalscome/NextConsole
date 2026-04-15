@@ -2,7 +2,7 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | string;
 
 /** Request type */
-export type RequestType = 'fetch' | 'xhr' | 'sse';
+export type RequestType = 'fetch' | 'xhr' | 'sse' | 'websocket';
 
 /** Network request entry */
 export interface NetworkEntry {
@@ -21,6 +21,8 @@ export interface NetworkEntry {
   duration: number;
   /** For SSE: accumulated events */
   sseEvents?: SSEEvent[];
+  /** For SSE/WebSocket: real-time messages */
+  messages?: StreamMessage[];
   /** Whether the request is still pending */
   pending: boolean;
   error?: string;
@@ -34,6 +36,15 @@ export interface SSEEvent {
   timestamp: number;
 }
 
+/** Real-time stream message (SSE/WebSocket) */
+export interface StreamMessage {
+  direction: 'in' | 'out';
+  data: string;
+  timestamp: number;
+  event?: string;
+  size?: number;
+}
+
 /** Network panel options */
 export interface NetworkOptions {
   /** Maximum number of requests to keep */
@@ -44,4 +55,6 @@ export interface NetworkOptions {
   hookXHR: boolean;
   /** Whether to hook EventSource */
   hookSSE: boolean;
+  /** Whether to hook WebSocket */
+  hookWebSocket: boolean;
 }

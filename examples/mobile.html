@@ -215,6 +215,8 @@
       <div class="action-btn" data-action="fetch">🌐 网络请求</div>
       <div class="action-btn" data-action="error">❌ 模拟报错</div>
       <div class="action-btn" data-action="storage">💾 写入存储</div>
+      <div class="action-btn" data-action="sse">📡 SSE</div>
+      <div class="action-btn" data-action="ws">🔌 WebSocket</div>
       <div class="action-btn" data-action="burst">⚡ 压力测试</div>
       <div class="action-btn" data-action="clear">🧹 清空</div>
     </div>
@@ -406,6 +408,159 @@
           const bubble = addAIBubble();
           bubble.querySelector('.cursor').remove();
           bubble.querySelector('.typing').textContent = '✅ 存储数据已写入，切换到 Storage 面板查看和编辑';
+          break;
+        }
+
+        case 'sse': {
+          console.info('📡 开始 SSE 连接...');
+          updateLogCount();
+          const evtSource = new EventSource('http://localhost:3210/sse');
+          let sseCount = 0;
+          const sseStreamId = `sse-${Date.now()}`;
+
+          evtSource.onopen = () => {
+            console.log('📡 SSE 连接已建立');
+            updateLogCount();
+          };
+          evtSource.addEventListener('done', (event) => {
+            evtSource.close();
+            nc.endStream(sseStreamId);
+            console.info(`📡 SSE 完成，共接收 ${sseCount} 条事件`, JSON.parse(event.data));
+            updateLogCount();
+          });
+          // Listen to all named events
+          ['connected','user_login','order_created','notification','chat_message','data_sync','heartbeat','user_logout'].forEach(evtName => {
+            evtSource.addEventListener(evtName, (event) => {
+              sseCount++;
+              const data = JSON.parse(event.data);
+              nc.appendStream(sseStreamId, `[${evtName}] ${event.data}\n`);
+              console.log(`📡 SSE #${sseCount} [${evtName}]:`, data);
+              updateLogCount();
+            });
+          });
+          evtSource.onerror = () => {
+            evtSource.close();
+            console.warn('📡 SSE 服务不可用，请先启动: node examples/server.js');
+            updateLogCount();
+            // Fallback mock
+            (async () => {
+              const mockId = `sse-mock-${Date.now()}`;
+              const mockData = [
+                { event: 'connected', data: { status: 'ok', server: 'mock' } },
+                { event: 'user_login', data: { userId: 'u_12345', name: '张三' } },
+                { event: 'order_created', data: { orderId: 'ORD-001', amount: 299.9 } },
+                { event: 'notification', data: { title: '通知', body: '服务器负载正常' } },
+                { event: 'chat_message', data: { from: 'Alice', text: '下午开会' } },
+              ];
+              for (let i = 0; i < mockData.length; i++) {
+                await sleep(600);
+                nc.appendStream(mockId, `[${mockData[i].event}] ${JSON.stringify(mockData[i].data)}\n`);
+                console.log(`📡 SSE 模拟 #${i + 1} [${mockData[i].event}]:`, mockData[i].data);
+                updateLogCount();
+              }
+              nc.endStream(mockId);
+              console.info('📡 SSE 模拟完成，共 5 条事件');
+              updateLogCount();
+            })();
+          };
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '📡 SSE 测试已启动，查看 Console 面板的流式日志和 Network 面板的 SSE 记录';
+          break;
+        }
+
+        case 'ws': {
+          console.info('🔌 开始 WebSocket 连接...');
+          updateLogCount();
+          let ws;
+          try {
+            ws = new WebSocket('ws://localhost:3210/ws');
+          } catch (e) {
+            ws = null;
+          }
+
+          const wsStreamId = `ws-${Date.now()}`;
+          let wsConnected = false;
+
+          const runMockWs = async () => {
+            console.warn('🔌 WebSocket 服务不可用，请先启动: node examples/server.js');
+            updateLogCount();
+            const mockMsgs = [
+              { type: 'auth', payload: { userId: 'u_12345', token: 'bearer_xxx' } },
+              { type: 'chat', payload: { from: 'Alice', text: '在吗？' } },
+              { type: 'chat', payload: { from: 'Bob', text: '在的，什么事？' } },
+              { type: 'notification', payload: { title: '系统通知', body: '您的订单已发货' } },
+              { type: 'ping', payload: { ts: Date.now() } },
+              { type: 'chat', payload: { from: 'Alice', text: '收到，谢谢！' } },
+              { type: 'close', payload: { reason: '会话结束' } },
+            ];
+            for (let i = 0; i < mockMsgs.length; i++) {
+              await sleep(500 + Math.random() * 400);
+              const msg = mockMsgs[i];
+              const text = JSON.stringify(msg);
+              nc.appendStream(wsStreamId, `← ${text}\n`);
+              console.log(`🔌 WS 收到 [${msg.type}]:`, msg.payload);
+              updateLogCount();
+            }
+            nc.endStream(wsStreamId);
+            console.info('🔌 WebSocket 模拟完成，共 7 条消息');
+            updateLogCount();
+          };
+
+          if (ws) {
+            const wsTimeout = setTimeout(() => {
+              if (!wsConnected) {
+                ws.close();
+                runMockWs();
+              }
+            }, 3000);
+
+            ws.onopen = () => {
+              wsConnected = true;
+              clearTimeout(wsTimeout);
+              console.log('🔌 WebSocket 已连接');
+              updateLogCount();
+              // Send test messages
+              const testMsgs = [
+                JSON.stringify({ action: 'ping' }),
+                JSON.stringify({ action: 'get_users' }),
+                'Hello NextConsole!',
+                '测试中文消息',
+              ];
+              testMsgs.forEach((msg, i) => {
+                setTimeout(() => {
+                  if (ws.readyState === 1) {
+                    ws.send(msg);
+                    nc.appendStream(wsStreamId, `→ ${msg}\n`);
+                    console.log(`🔌 WS 发送:`, msg);
+                    updateLogCount();
+                  }
+                }, (i + 1) * 1000);
+              });
+              setTimeout(() => {
+                if (ws.readyState === 1) ws.close();
+                nc.endStream(wsStreamId);
+                console.info('🔌 WebSocket 已关闭');
+                updateLogCount();
+              }, 8000);
+            };
+            ws.onmessage = (event) => {
+              nc.appendStream(wsStreamId, `← ${event.data}\n`);
+              console.log('🔌 WS 收到:', event.data);
+              updateLogCount();
+            };
+            ws.onerror = () => {
+              clearTimeout(wsTimeout);
+              if (!wsConnected) runMockWs();
+            };
+          } else {
+            runMockWs();
+          }
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '🔌 WebSocket 测试已启动，→ 为发送，← 为接收，查看 Console 流式日志';
           break;
         }
 

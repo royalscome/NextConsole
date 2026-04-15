@@ -37,6 +37,6 @@ export interface NextConsoleEvents {
 }
 
 export type { LogLevel, LogEntry, ConsoleOptions } from './console';
-export type { HttpMethod, RequestType, NetworkEntry, SSEEvent, NetworkOptions } from './network';
+export type { HttpMethod, RequestType, NetworkEntry, SSEEvent, StreamMessage, NetworkOptions } from './network';
 export type { StorageType, StorageEntry, StorageOptions } from './storage';
 export type { SystemInfo, PerformanceMetrics } from './system';
