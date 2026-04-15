@@ -1,0 +1,46 @@
+{
+  "name": "nextconsole",
+  "version": "1.0.0",
+  "description": "Next-generation front-end debugging console. Replaces vConsole with AI streaming log support, modern web & mobile H5 optimization.",
+  "main": "dist/nextconsole.umd.js",
+  "module": "dist/nextconsole.es.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/nextconsole.es.js",
+      "require": "./dist/nextconsole.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "console",
+    "debugger",
+    "vconsole",
+    "devtools",
+    "mobile",
+    "h5",
+    "ai",
+    "streaming",
+    "sse"
+  ],
+  "author": "白菜",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicepkg/NextConsole.git"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^3.9.0"
+  }
+}

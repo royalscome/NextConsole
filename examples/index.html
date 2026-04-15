@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>NextConsole Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 { color: #58a6ff; margin-bottom: 8px; }
+    p { color: #8b949e; margin-bottom: 20px; }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 16px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+    button:hover { background: #30363d; }
+    button:active { background: #484f58; }
+    .section { margin-bottom: 24px; }
+    .section h2 { color: #58a6ff; font-size: 16px; margin-bottom: 8px; }
+    pre {
+      background: #161b22;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      color: #8b949e;
+    }
+    #demo-output {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 60px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 NextConsole Demo</h1>
+  <p>Tap the floating <strong>NC</strong> button to open the debug panel. Try the demos below.</p>
+
+  <div class="section">
+    <h2>Console Logs</h2>
+    <div class="demo-grid">
+      <button onclick="demoLog()">console.log()</button>
+      <button onclick="demoInfo()">console.info()</button>
+      <button onclick="demoWarn()">console.warn()</button>
+      <button onclick="demoError()">console.error()</button>
+      <button onclick="demoJSON()">Log JSON Object</button>
+      <button onclick="demoManyLogs()">Log 1000 entries</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>AI Streaming Logs</h2>
+    <div class="demo-grid">
+      <button onclick="demoStream()">Simulate AI Stream</button>
+      <button onclick="demoSSEStream()">Simulate SSE Stream</button>
+    </div>
+    <div id="demo-output"></div>
+  </div>
+
+  <div class="section">
+    <h2>Network Requests</h2>
+    <div class="demo-grid">
+      <button onclick="demoFetch()">Fetch JSON</button>
+      <button onclick="demoFetchError()">Fetch (404)</button>
+      <button onclick="demoXHR()">XHR Request</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Storage</h2>
+    <div class="demo-grid">
+      <button onclick="demoStorage()">Add Storage Items</button>
+      <button onclick="demoCookie()">Set Cookie</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Panel Control</h2>
+    <div class="demo-grid">
+      <button onclick="nc.show()">Show Panel</button>
+      <button onclick="nc.hide()">Hide Panel</button>
+      <button onclick="nc.toggle()">Toggle Panel</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Quick Start</h2>
+    <pre>&lt;script src="nextconsole.umd.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var nc = new NextConsole();
+  // AI streaming:
+  nc.appendStream('s1', 'Hello ');
+  nc.appendStream('s1', 'World!');
+  nc.endStream('s1');
+&lt;/script&gt;</pre>
+  </div>
+
+  <!-- Load NextConsole from source (Vite dev mode) -->
+  <script type="module">
+    import NextConsole from '../src/index.ts';
+
+    const nc = new NextConsole({
+      defaultTab: 'console',
+      panelHeight: 0.4,
+    });
+
+    // Expose to global for demo buttons
+    window.nc = nc;
+
+    // Demo functions
+    window.demoLog = () => console.log('Hello from NextConsole!', { version: '1.0.0', ts: Date.now() });
+    window.demoInfo = () => console.info('ℹ️ Info message', 'Multiple args supported');
+    window.demoWarn = () => console.warn('⚠️ Warning: something looks off', { code: 'W001' });
+    window.demoError = () => console.error('❌ Error occurred!', new Error('Test error'));
+    window.demoJSON = () => console.log({
+      user: { name: 'Alice', age: 30, roles: ['admin', 'editor'] },
+      metadata: { created: new Date().toISOString(), version: 2 },
+      nested: { deep: { value: [1, 2, 3] } },
+    });
+
+    window.demoManyLogs = () => {
+      console.log('--- Starting 1000 log burst ---');
+      for (let i = 0; i < 1000; i++) {
+        console.log(`Log entry #${i}`, { index: i, random: Math.random() });
+      }
+      console.log('--- Burst complete ---');
+    };
+
+    window.demoStream = () => {
+      const output = document.getElementById('demo-output');
+      const streamId = 'demo-' + Date.now();
+      const text = 'NextConsole supports AI streaming logs. Each chunk is appended in real-time without freezing the UI. This is perfect for LLM token-by-token output display. ';
+      let idx = 0;
+      output.textContent = '';
+
+      const interval = setInterval(() => {
+        if (idx >= text.length) {
+          nc.endStream(streamId);
+          clearInterval(interval);
+          return;
+        }
+        const chunk = text.slice(idx, idx + 3);
+        nc.appendStream(streamId, chunk);
+        output.textContent += chunk;
+        idx += 3;
+      }, 50);
+    };
+
+    window.demoSSEStream = () => {
+      const output = document.getElementById('demo-output');
+      output.textContent = 'Simulating SSE data events...\n';
+      // Simulate SSE-like behavior through console streaming
+      const streamId = 'sse-demo-' + Date.now();
+      const events = [
+        'data: {"token": "Hello"}',
+        'data: {"token": " from"}',
+        'data: {"token": " SSE"}',
+        'data: {"token": " stream!"}',
+        'data: [DONE]',
+      ];
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= events.length) {
+          nc.endStream(streamId);
+          clearInterval(interval);
+          return;
+        }
+        nc.appendStream(streamId, events[i] + '\n');
+        output.textContent += events[i] + '\n';
+        i++;
+      }, 300);
+    };
+
+    window.demoFetch = async () => {
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+        const data = await res.json();
+        console.log('Fetch result:', data);
+      } catch (e) {
+        console.error('Fetch failed:', e);
+      }
+    };
+
+    window.demoFetchError = async () => {
+      try {
+        await fetch('https://jsonplaceholder.typicode.com/notfound/999');
+      } catch (e) {
+        console.error('Fetch error:', e);
+      }
+    };
+
+    window.demoXHR = () => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1');
+      xhr.onload = () => console.log('XHR result:', JSON.parse(xhr.responseText));
+      xhr.onerror = () => console.error('XHR failed');
+      xhr.send();
+    };
+
+    window.demoStorage = () => {
+      localStorage.setItem('nc_demo_key', JSON.stringify({ hello: 'world', ts: Date.now() }));
+      sessionStorage.setItem('nc_session_test', 'session value ' + Date.now());
+      console.log('Storage items added. Switch to Storage tab to view.');
+    };
+
+    window.demoCookie = () => {
+      document.cookie = `nc_demo_cookie=value_${Date.now()}; path=/; max-age=3600`;
+      console.log('Cookie set. Switch to Storage tab to view.');
+    };
+
+    console.log('%c NextConsole Demo Loaded ', 'background:#0078d4;color:#fff;padding:4px 8px;border-radius:4px');
+    console.info('Click the NC button or use the demo buttons to test features.');
+  </script>
+</body>
+</html>
