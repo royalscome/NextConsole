@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>NextConsole 测试页面</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      padding-bottom: 50vh;
+    }
+    h1 { color: var(--accent); font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    h2 {
+      color: var(--accent);
+      font-size: 15px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    button {
+      padding: 8px 12px;
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    button:hover { background: #30363d; border-color: var(--accent); }
+    button:active { background: #484f58; }
+    button .icon { margin-right: 4px; }
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .tag-log { background: #21262d; color: var(--muted); }
+    .tag-net { background: #0d419d33; color: var(--accent); }
+    .tag-store { background: #23863633; color: var(--green); }
+    .tag-stream { background: #9e6a0333; color: var(--yellow); }
+    #output {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 50px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      color: var(--green);
+      margin-top: 10px;
+    }
+    .result {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .result-ok { background: #23863622; color: var(--green); }
+    .result-err { background: #f8514922; color: var(--red); }
+    .sep { height: 1px; background: var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>🧪 NextConsole 测试页面</h1>
+  <p class="subtitle">点击右下角 NC 按钮打开调试面板，然后执行下面的测试用例</p>
+
+  <!-- ==================== Console 测试 ==================== -->
+  <div class="card">
+    <h2>📋 Console 面板测试</h2>
+    <div class="btn-grid">
+      <button onclick="testLog()"><span class="icon">📝</span>log <span class="tag tag-log">基础</span></button>
+      <button onclick="testInfo()"><span class="icon">ℹ️</span>info</button>
+      <button onclick="testWarn()"><span class="icon">⚠️</span>warn</button>
+      <button onclick="testError()"><span class="icon">❌</span>error</button>
+      <button onclick="testDebug()"><span class="icon">🔍</span>debug</button>
+      <button onclick="testJSON()"><span class="icon">📦</span>JSON 对象</button>
+      <button onclick="testNestedObj()"><span class="icon">🪆</span>深层嵌套</button>
+      <button onclick="testArray()"><span class="icon">📊</span>数组数据</button>
+      <button onclick="testMultiArgs()"><span class="icon">🔗</span>多参数</button>
+      <button onclick="testSpecialTypes()"><span class="icon">🎭</span>特殊类型</button>
+      <button onclick="testLongString()"><span class="icon">📜</span>长字符串</button>
+      <button onclick="testCircular()"><span class="icon">🔄</span>循环引用</button>
+    </div>
+  </div>
+
+  <!-- ==================== 性能压力测试 ==================== -->
+  <div class="card">
+    <h2>⚡ 性能 & 压力测试</h2>
+    <div class="btn-grid">
+      <button onclick="testBurst100()"><span class="icon">💨</span>100 条日志</button>
+      <button onclick="testBurst1000()"><span class="icon">🌊</span>1000 条日志</button>
+      <button onclick="testBurst5000()"><span class="icon">🔥</span>5000 条日志</button>
+      <button onclick="testMixedBurst()"><span class="icon">🎲</span>混合级别 500 条</button>
+    </div>
+    <div id="perf-result" class="result" style="display:none"></div>
+  </div>
+
+  <!-- ==================== AI 流式日志测试 ==================== -->
+  <div class="card">
+    <h2>🤖 AI 流式日志测试</h2>
+    <div class="btn-grid">
+      <button onclick="testStreamSlow()"><span class="icon">🐢</span>慢速流式 <span class="tag tag-stream">80ms</span></button>
+      <button onclick="testStreamFast()"><span class="icon">🐇</span>快速流式 <span class="tag tag-stream">15ms</span></button>
+      <button onclick="testStreamJSON()"><span class="icon">📡</span>SSE JSON 流</button>
+      <button onclick="testStreamMulti()"><span class="icon">🔀</span>多路并发流</button>
+      <button onclick="testStreamLong()"><span class="icon">📄</span>长文本流</button>
+    </div>
+    <div id="output"></div>
+  </div>
+
+  <!-- ==================== Network 测试 ==================== -->
+  <div class="card">
+    <h2>🌐 Network 面板测试</h2>
+    <div class="btn-grid">
+      <button onclick="testFetchGet()"><span class="icon">📥</span>Fetch GET <span class="tag tag-net">JSON</span></button>
+      <button onclick="testFetchPost()"><span class="icon">📤</span>Fetch POST</button>
+      <button onclick="testFetch404()"><span class="icon">🚫</span>Fetch 404</button>
+      <button onclick="testFetchTimeout()"><span class="icon">⏰</span>Fetch 慢请求</button>
+      <button onclick="testXHR()"><span class="icon">📡</span>XHR GET</button>
+      <button onclick="testXHRPost()"><span class="icon">📮</span>XHR POST</button>
+      <button onclick="testMultiFetch()"><span class="icon">🔄</span>并发 5 请求</button>
+    </div>
+  </div>
+
+  <!-- ==================== Storage 测试 ==================== -->
+  <div class="card">
+    <h2>💾 Storage 面板测试</h2>
+    <div class="btn-grid">
+      <button onclick="testLocalStorage()"><span class="icon">📦</span>写 localStorage</button>
+      <button onclick="testSessionStorage()"><span class="icon">📋</span>写 sessionStorage</button>
+      <button onclick="testCookie()"><span class="icon">🍪</span>写 Cookie</button>
+      <button onclick="testBatchStorage()"><span class="icon">📚</span>批量写入 10 条</button>
+      <button onclick="testClearStorage()"><span class="icon">🗑️</span>清空全部</button>
+    </div>
+  </div>
+
+  <!-- ==================== 面板控制 ==================== -->
+  <div class="card">
+    <h2>🎛️ 面板控制</h2>
+    <div class="btn-grid">
+      <button onclick="nc.show()"><span class="icon">👁️</span>显示面板</button>
+      <button onclick="nc.hide()"><span class="icon">🙈</span>隐藏面板</button>
+      <button onclick="nc.toggle()"><span class="icon">🔁</span>切换面板</button>
+      <button onclick="nc.clearConsole()"><span class="icon">🧹</span>清空日志</button>
+      <button onclick="nc.clearNetwork()"><span class="icon">🧹</span>清空网络</button>
+      <button onclick="testExport()"><span class="icon">💾</span>导出日志</button>
+      <button onclick="testDestroy()"><span class="icon">💥</span>销毁实例</button>
+      <button onclick="testReinit()"><span class="icon">🔄</span>重新初始化</button>
+    </div>
+  </div>
+
+  <!-- ==================== API 验证 ==================== -->
+  <div class="card">
+    <h2>✅ API 验证</h2>
+    <div class="btn-grid">
+      <button onclick="testAPIGetLogs()"><span class="icon">📊</span>getLogEntries()</button>
+      <button onclick="testAPIGetNetwork()"><span class="icon">📊</span>getNetworkEntries()</button>
+      <button onclick="testAPIVisibility()"><span class="icon">👁️</span>isVisible</button>
+    </div>
+    <div id="api-result" class="result" style="display:none"></div>
+  </div>
+
+  <!-- ==================== DOM 测试元素 ==================== -->
+  <div class="card">
+    <h2>🌲 Element 面板测试元素</h2>
+    <div id="test-dom-tree">
+      <div class="test-parent" data-info="parent">
+        <span class="test-child" id="child-1">子元素 1</span>
+        <span class="test-child" id="child-2">子元素 2</span>
+        <div class="test-nested">
+          <a href="#" class="test-link">链接</a>
+          <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="test" width="1" height="1" />
+        </div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">切换到 Element 面板查看上面的 DOM 结构</p>
+  </div>
+
+  <script type="module">
+    import NextConsole from '../src/index.ts';
+
+    // 初始化
+    let nc = new NextConsole({ defaultTab: 'console', panelHeight: 0.4 });
+    window.nc = nc;
+    const output = document.getElementById('output');
+
+    function log(msg) { output.textContent += msg + '\n'; output.scrollTop = output.scrollHeight; }
+    function clearOutput() { output.textContent = ''; }
+
+    // ==================== Console 测试 ====================
+    window.testLog = () => console.log('Hello NextConsole!', { ts: Date.now() });
+    window.testInfo = () => console.info('ℹ️ 这是一条 info 消息', 'version: 1.0.0');
+    window.testWarn = () => console.warn('⚠️ 警告信息', { code: 'W001', detail: '请注意检查' });
+    window.testError = () => console.error('❌ 发生错误', new Error('测试错误'));
+    window.testDebug = () => console.debug('🔍 Debug 信息', { debug: true, level: 'verbose' });
+
+    window.testJSON = () => console.log({
+      user: { name: '张三', age: 28, roles: ['admin', 'editor'] },
+      settings: { theme: 'dark', lang: 'zh-CN', notifications: true },
+      metadata: { created: new Date().toISOString(), version: 2 },
+    });
+
+    window.testNestedObj = () => console.log('深层嵌套:', {
+      level1: {
+        level2: {
+          level3: {
+            level4: {
+              level5: { value: '你找到我了！', arr: [1, 2, 3] }
+            }
+          }
+        }
+      }
+    });
+
+    window.testArray = () => console.log('数组数据:', [
+      { id: 1, name: '苹果', price: 5.5 },
+      { id: 2, name: '香蕉', price: 3.2 },
+      { id: 3, name: '橙子', price: 4.8 },
+    ]);
+
+    window.testMultiArgs = () => console.log('参数1', 42, true, null, undefined, [1, 2], { key: 'val' });
+
+    window.testSpecialTypes = () => {
+      console.log('字符串:', 'hello');
+      console.log('数字:', 42, 3.14, -1, Infinity, NaN);
+      console.log('布尔:', true, false);
+      console.log('空值:', null, undefined);
+      console.log('函数:', function myFunc() {}, () => {});
+      console.log('Symbol:', Symbol('test'));
+      console.log('正则:', /hello\sworld/gi);
+      console.log('日期:', new Date());
+      console.log('Map:', new Map([['a', 1], ['b', 2]]));
+      console.log('Set:', new Set([1, 2, 3]));
+    };
+
+    window.testLongString = () => {
+      const long = '这是一段很长的文本。'.repeat(50);
+      console.log('长字符串 (500字):', long);
+    };
+
+    window.testCircular = () => {
+      const obj = { name: 'circular' };
+      obj.self = obj;
+      console.log('循环引用对象:', obj);
+    };
+
+    // ==================== 性能测试 ====================
+    function burstLogs(count) {
+      const perfEl = document.getElementById('perf-result');
+      const start = performance.now();
+      for (let i = 0; i < count; i++) {
+        console.log(`[${i + 1}/${count}]`, { index: i, data: Math.random().toFixed(4) });
+      }
+      const elapsed = performance.now() - start;
+      perfEl.style.display = 'block';
+      perfEl.className = 'result result-ok';
+      perfEl.textContent = `✅ ${count} 条日志写入耗时: ${elapsed.toFixed(1)}ms (${(count / elapsed * 1000).toFixed(0)} 条/秒)`;
+    }
+    window.testBurst100 = () => burstLogs(100);
+    window.testBurst1000 = () => burstLogs(1000);
+    window.testBurst5000 = () => burstLogs(5000);
+
+    window.testMixedBurst = () => {
+      const levels = ['log', 'info', 'warn', 'error', 'debug'];
+      const start = performance.now();
+      for (let i = 0; i < 500; i++) {
+        const level = levels[i % levels.length];
+        console[level](`[${level.toUpperCase()}] #${i}`, { ts: Date.now() });
+      }
+      const elapsed = performance.now() - start;
+      const perfEl = document.getElementById('perf-result');
+      perfEl.style.display = 'block';
+      perfEl.className = 'result result-ok';
+      perfEl.textContent = `✅ 500 条混合日志写入耗时: ${elapsed.toFixed(1)}ms`;
+    };
+
+    // ==================== 流式日志测试 ====================
+    function simulateStream(id, text, interval) {
+      clearOutput();
+      let idx = 0;
+      const streamId = `${id}-${Date.now()}`;
+      log(`▶ 流式输出开始 [${streamId}]`);
+      const timer = setInterval(() => {
+        if (idx >= text.length) {
+          nc.endStream(streamId);
+          log(`\n✅ 流式输出结束`);
+          clearInterval(timer);
+          return;
+        }
+        const chunk = text.slice(idx, idx + 3);
+        nc.appendStream(streamId, chunk);
+        output.textContent = output.textContent.replace(/\n✅.*$/, '') ;
+        // 追加到同一行显示
+        const lines = output.textContent.split('\n');
+        if (lines.length > 1 && !lines[lines.length - 1].startsWith('▶')) {
+          lines[lines.length - 1] += chunk;
+        } else {
+          lines.push(chunk);
+        }
+        output.textContent = lines.join('\n');
+        output.scrollTop = output.scrollHeight;
+        idx += 3;
+      }, interval);
+    }
+
+    window.testStreamSlow = () => simulateStream(
+      'slow',
+      'NextConsole 是新一代前端调试控制台，专为 AI 流式输出场景优化。支持 SSE、流式 JSON，具备虚拟列表渲染引擎，轻松处理万级日志。',
+      80,
+    );
+
+    window.testStreamFast = () => simulateStream(
+      'fast',
+      '这是快速流式输出测试。每 15ms 输出一个 chunk，模拟高频率 LLM token 输出场景。UI 不应卡顿或丢帧。观察面板中的蓝色左边框表示正在流式传输。',
+      15,
+    );
+
+    window.testStreamJSON = () => {
+      clearOutput();
+      const streamId = `sse-${Date.now()}`;
+      const events = [
+        { role: 'assistant', content: '' },
+        { delta: { content: '你好' } },
+        { delta: { content: '！' } },
+        { delta: { content: '我是' } },
+        { delta: { content: 'AI' } },
+        { delta: { content: '助手' } },
+        { delta: { content: '，' } },
+        { delta: { content: '很高兴' } },
+        { delta: { content: '为你' } },
+        { delta: { content: '服务。' } },
+        { finish_reason: 'stop' },
+      ];
+      let i = 0;
+      log('▶ SSE JSON 流开始');
+      const timer = setInterval(() => {
+        if (i >= events.length) {
+          nc.endStream(streamId);
+          log('✅ SSE 流结束');
+          clearInterval(timer);
+          return;
+        }
+        const line = `data: ${JSON.stringify(events[i])}`;
+        nc.appendStream(streamId, line + '\n');
+        log(line);
+        i++;
+      }, 200);
+    };
+
+    window.testStreamMulti = () => {
+      clearOutput();
+      log('▶ 启动 3 路并发流...');
+      const texts = [
+        '【流 A】这是第一路流式数据，用于验证多路并发场景。',
+        '【流 B】第二路流在同时进行，不应互相干扰。',
+        '【流 C】第三路也在输出，三路流独立渲染。',
+      ];
+      texts.forEach((text, idx) => {
+        const streamId = `multi-${idx}-${Date.now()}`;
+        let pos = 0;
+        const timer = setInterval(() => {
+          if (pos >= text.length) {
+            nc.endStream(streamId);
+            if (idx === texts.length - 1) log('✅ 全部流结束');
+            clearInterval(timer);
+            return;
+          }
+          const chunk = text.slice(pos, pos + 2);
+          nc.appendStream(streamId, chunk);
+          pos += 2;
+        }, 50 + idx * 20);
+      });
+    };
+
+    window.testStreamLong = () => {
+      const longText = `在人工智能领域，大语言模型（LLM）的流式输出是一种常见的交互模式。用户发送问题后，模型以 token 为单位逐步生成回答，通过 Server-Sent Events (SSE) 或 WebSocket 实时推送到前端。NextConsole 专门针对这一场景进行了优化：
+
+1. **流式缓冲机制**：通过 requestAnimationFrame 批量合并 UI 更新，避免高频 DOM 操作导致的卡顿。
+2. **虚拟列表渲染**：即使积累了上万条日志，面板依然保持流畅滚动。
+3. **流式状态标记**：正在流式传输的日志条目会以蓝色左边框标识，结束后自动恢复。
+
+这段文字共约 300 字，用于测试较长的流式输出场景。观察 Console 面板中的渲染效果，确认文字完整且无丢失。`;
+
+      simulateStream('long', longText, 30);
+    };
+
+    // ==================== Network 测试 ====================
+    window.testFetchGet = async () => {
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+        const data = await res.json();
+        console.log('✅ Fetch GET 成功:', data);
+      } catch (e) { console.error('Fetch 失败:', e); }
+    };
+
+    window.testFetchPost = async () => {
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'NextConsole', body: '测试 POST', userId: 1 }),
+        });
+        const data = await res.json();
+        console.log('✅ Fetch POST 成功:', data);
+      } catch (e) { console.error('Fetch POST 失败:', e); }
+    };
+
+    window.testFetch404 = async () => {
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/notfound/999');
+        console.warn('404 响应:', res.status, res.statusText);
+      } catch (e) { console.error('Fetch 异常:', e); }
+    };
+
+    window.testFetchTimeout = async () => {
+      console.info('⏳ 发起慢请求 (httpbin delay 2s)...');
+      try {
+        const res = await fetch('https://httpbin.org/delay/2');
+        console.log('✅ 慢请求完成:', res.status);
+      } catch (e) { console.error('慢请求失败:', e); }
+    };
+
+    window.testXHR = () => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1');
+      xhr.onload = () => console.log('✅ XHR GET:', JSON.parse(xhr.responseText));
+      xhr.onerror = () => console.error('XHR 失败');
+      xhr.send();
+    };
+
+    window.testXHRPost = () => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://jsonplaceholder.typicode.com/posts');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = () => console.log('✅ XHR POST:', JSON.parse(xhr.responseText));
+      xhr.onerror = () => console.error('XHR POST 失败');
+      xhr.send(JSON.stringify({ title: 'XHR Test', body: '测试', userId: 1 }));
+    };
+
+    window.testMultiFetch = async () => {
+      console.info('⏳ 发起 5 个并发请求...');
+      const urls = [1, 2, 3, 4, 5].map(id => `https://jsonplaceholder.typicode.com/posts/${id}`);
+      const results = await Promise.allSettled(urls.map(url => fetch(url).then(r => r.json())));
+      console.log('✅ 并发请求结果:', results.map(r => r.status === 'fulfilled' ? r.value.title : r.reason));
+    };
+
+    // ==================== Storage 测试 ====================
+    window.testLocalStorage = () => {
+      localStorage.setItem('nc_test_string', 'hello world');
+      localStorage.setItem('nc_test_json', JSON.stringify({ name: '测试', ts: Date.now() }));
+      localStorage.setItem('nc_test_number', '42');
+      console.log('✅ 已写入 3 条 localStorage，切换到 Storage 面板查看');
+    };
+
+    window.testSessionStorage = () => {
+      sessionStorage.setItem('nc_session_1', '会话数据 ' + Date.now());
+      sessionStorage.setItem('nc_session_2', JSON.stringify({ type: 'session', active: true }));
+      console.log('✅ 已写入 2 条 sessionStorage');
+    };
+
+    window.testCookie = () => {
+      document.cookie = `nc_cookie_a=value_${Date.now()}; path=/; max-age=3600`;
+      document.cookie = `nc_cookie_b=中文值; path=/; max-age=3600`;
+      console.log('✅ 已设置 2 个 Cookie');
+    };
+
+    window.testBatchStorage = () => {
+      for (let i = 0; i < 10; i++) {
+        localStorage.setItem(`nc_batch_${i}`, JSON.stringify({
+          index: i,
+          value: Math.random().toFixed(6),
+          created: new Date().toISOString(),
+        }));
+      }
+      console.log('✅ 已批量写入 10 条 localStorage');
+    };
+
+    window.testClearStorage = () => {
+      // 只清除 nc_ 前缀的项
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('nc_')) keys.push(key);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+
+      const sKeys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('nc_')) sKeys.push(key);
+      }
+      sKeys.forEach(k => sessionStorage.removeItem(k));
+
+      // 清除 nc_ cookie
+      document.cookie.split(';').forEach(c => {
+        const name = c.split('=')[0].trim();
+        if (name.startsWith('nc_')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        }
+      });
+
+      console.log('✅ 已清除所有 nc_ 前缀的存储项');
+    };
+
+    // ==================== 面板控制 ====================
+    window.testExport = () => {
+      const json = nc.exportLogs();
+      const count = JSON.parse(json).length;
+      console.log(`✅ 导出了 ${count} 条日志`);
+      // 创建下载
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nextconsole-test-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    window.testDestroy = () => {
+      nc.destroy();
+      console.log('NextConsole 已销毁（这条日志不会被捕获）');
+      alert('NextConsole 已销毁。点击"重新初始化"恢复。');
+    };
+
+    window.testReinit = () => {
+      nc = new NextConsole({ defaultTab: 'console', panelHeight: 0.4 });
+      window.nc = nc;
+      console.log('✅ NextConsole 已重新初始化');
+    };
+
+    // ==================== API 验证 ====================
+    window.testAPIGetLogs = () => {
+      const entries = nc.getLogEntries();
+      const el = document.getElementById('api-result');
+      el.style.display = 'block';
+      el.className = 'result result-ok';
+      el.textContent = `✅ getLogEntries() 返回 ${entries.length} 条记录\n最后一条: ${JSON.stringify(entries[entries.length - 1]?.args).slice(0, 80)}...`;
+    };
+
+    window.testAPIGetNetwork = () => {
+      const entries = nc.getNetworkEntries();
+      const el = document.getElementById('api-result');
+      el.style.display = 'block';
+      el.className = 'result result-ok';
+      el.textContent = `✅ getNetworkEntries() 返回 ${entries.length} 条记录`;
+      if (entries.length > 0) {
+        const last = entries[entries.length - 1];
+        el.textContent += `\n最后: ${last.method} ${last.url.slice(0, 60)} → ${last.status}`;
+      }
+    };
+
+    window.testAPIVisibility = () => {
+      const el = document.getElementById('api-result');
+      el.style.display = 'block';
+      el.className = 'result result-ok';
+      el.textContent = `✅ nc.isVisible = ${nc.isVisible}`;
+    };
+
+    // 启动时输出
+    console.log('%c NextConsole 测试页面已加载 ', 'background:#0078d4;color:#fff;padding:4px 8px;border-radius:4px');
+    console.info('🧪 测试页面就绪，请使用上方按钮进行测试');
+  </script>
+</body>
+</html>

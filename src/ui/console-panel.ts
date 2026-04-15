@@ -5,16 +5,14 @@ import { highlightJSON } from '../utils/json';
 import { safeStringify } from '../utils/json';
 import { escapeHTML } from '../utils/dom';
 
-const ROW_HEIGHT = 24;
-const OVERSCAN = 10;
+const MAX_RENDER = 500;
 
 /**
- * Console panel with virtual list rendering for 10,000+ logs.
+ * Console panel with auto-height rows that support text wrapping.
  */
 export class ConsolePanel {
   private container: HTMLElement;
   private listEl!: HTMLElement;
-  private viewportEl!: HTMLElement;
   private toolbarEl!: HTMLElement;
   private core: ConsoleCore;
   private filteredEntries: LogEntry[] = [];
@@ -46,14 +44,10 @@ export class ConsolePanel {
     `;
     this.container.appendChild(this.toolbarEl);
 
-    // Virtual list container
+    // Scrollable list container
     this.listEl = document.createElement('div');
     this.listEl.className = 'nc-console-list';
     this.container.appendChild(this.listEl);
-
-    this.viewportEl = document.createElement('div');
-    this.viewportEl.className = 'nc-console-viewport';
-    this.listEl.appendChild(this.viewportEl);
 
     this.refreshEntries();
   }
@@ -126,44 +120,31 @@ export class ConsolePanel {
   private refreshEntries(): void {
     const levels = this.activeFilters.size > 0 ? Array.from(this.activeFilters) : undefined;
     this.filteredEntries = this.core.getFilteredEntries(levels, this.searchText || undefined);
-    this.renderVirtualList();
+    this.renderList();
   }
 
-  private renderVirtualList(): void {
+  private renderList(): void {
     const entries = this.filteredEntries;
-    const totalHeight = entries.length * ROW_HEIGHT;
-    this.viewportEl.style.height = `${totalHeight}px`;
+    // Only render the last MAX_RENDER entries for performance
+    const start = Math.max(0, entries.length - MAX_RENDER);
 
-    const scrollTop = this.listEl.scrollTop;
-    const clientHeight = this.listEl.clientHeight;
-
-    const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
-    const endIdx = Math.min(entries.length, Math.ceil((scrollTop + clientHeight) / ROW_HEIGHT) + OVERSCAN);
-
-    // Render visible rows
     let html = '';
-    for (let i = startIdx; i < endIdx; i++) {
+    if (start > 0) {
+      html += `<div class="nc-log-entry" style="justify-content:center;color:var(--nc-text-muted);font-size:11px">... 省略了 ${start} 条更早的日志 ...</div>`;
+    }
+    for (let i = start; i < entries.length; i++) {
       const entry = entries[i];
-      const y = i * ROW_HEIGHT;
       const streamClass = entry.streaming ? ' nc-log-streaming' : '';
-      html += `<div class="nc-log-entry nc-log-level-${entry.level}${streamClass}" style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_HEIGHT}px">`;
+      html += `<div class="nc-log-entry nc-log-level-${entry.level}${streamClass}">`;
       html += `<span class="nc-log-time">${formatTime(entry.timestamp)}</span>`;
       html += `<span class="nc-log-body">${this.renderArgs(entry.args)}</span>`;
       html += `</div>`;
     }
-    this.viewportEl.innerHTML = html;
+    this.listEl.innerHTML = html;
 
     // Auto-scroll to bottom
     if (this.scrollLocked && entries.length > 0) {
-      this.listEl.scrollTop = totalHeight;
-    }
-
-    // Re-bind scroll for virtual scrolling
-    if (!this.listEl.dataset.ncScrollBound) {
-      this.listEl.dataset.ncScrollBound = '1';
-      this.listEl.addEventListener('scroll', () => {
-        this.renderVirtualList();
-      });
+      this.listEl.scrollTop = this.listEl.scrollHeight;
     }
   }
 

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>NextConsole 移动端演示</title>
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow-x: hidden; }
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(145deg, #0f0c29, #1a1a3e, #24243e);
+      color: #e0e0e0;
+      padding: var(--safe-top) 0 var(--safe-bottom);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .header {
+      padding: 40px 20px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(88,166,255,0.12) 0%, transparent 100%);
+    }
+    .header h1 {
+      font-size: 24px;
+      background: linear-gradient(135deg, #58a6ff, #79c0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .header p { font-size: 13px; color: #8b949e; }
+
+    /* Chat mockup */
+    .chat-container {
+      padding: 12px 16px;
+      padding-bottom: 80px;
+    }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      animation: fadeUp 0.3s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-user {
+      background: #2563eb;
+      color: #fff;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-ai {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-ai .typing {
+      display: inline-block;
+    }
+    .chat-ai .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 14px;
+      background: #58a6ff;
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.8s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* 底部操作栏 */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 12, 41, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 12px calc(10px + var(--safe-bottom));
+      z-index: 100;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      color: #e2e8f0;
+      font-size: 15px;
+      outline: none;
+    }
+    .input-row input:focus { border-color: #58a6ff; }
+    .input-row input::placeholder { color: #64748b; }
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .send-btn:active { background: #1d4ed8; }
+
+    /* 快捷操作按钮 */
+    .actions {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .actions::-webkit-scrollbar { display: none; }
+    .action-btn {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      color: #94a3b8;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .action-btn:active { background: rgba(255,255,255,0.12); color: #e2e8f0; }
+
+    /* 网络状态指示器 */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 8px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    /* 通知卡片 */
+    .notify-card {
+      margin: 0 16px 12px;
+      padding: 12px 14px;
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      border-radius: 12px;
+      font-size: 13px;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .notify-card .icon { font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🤖 AI Chat Demo</h1>
+    <p>NextConsole 移动端调试演示 · 点击右下 NC 按钮</p>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="status-dot"></span>已连接</span>
+    <span>模型: GPT-4o</span>
+    <span id="log-count">日志: 0</span>
+  </div>
+
+  <div class="notify-card">
+    <span class="icon">💡</span>
+    <span>拖拽 NC 按钮可移动位置，点击打开调试面板。下方按钮可触发各类测试。</span>
+  </div>
+
+  <div class="chat-container" id="chat"></div>
+
+  <div class="bottom-bar">
+    <div class="input-row">
+      <input type="text" id="user-input" placeholder="输入消息..." enterkeyhint="send" />
+      <button class="send-btn" id="send-btn">➤</button>
+    </div>
+    <div class="actions">
+      <div class="action-btn" data-action="stream">🤖 AI 流式</div>
+      <div class="action-btn" data-action="fetch">🌐 网络请求</div>
+      <div class="action-btn" data-action="error">❌ 模拟报错</div>
+      <div class="action-btn" data-action="storage">💾 写入存储</div>
+      <div class="action-btn" data-action="burst">⚡ 压力测试</div>
+      <div class="action-btn" data-action="clear">🧹 清空</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import NextConsole from '../src/index.ts';
+
+    const nc = new NextConsole({
+      defaultTab: 'console',
+      panelHeight: 0.45,
+      buttonPosition: { x: window.innerWidth - 64, y: window.innerHeight - 160 },
+    });
+    window.nc = nc;
+
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const logCountEl = document.getElementById('log-count');
+    let logCount = 0;
+
+    function updateLogCount() {
+      logCount++;
+      logCountEl.textContent = `日志: ${logCount}`;
+    }
+
+    // ========== 聊天 UI ==========
+    function addUserBubble(text) {
+      const div = document.createElement('div');
+      div.className = 'chat-bubble chat-user';
+      div.textContent = text;
+      chat.appendChild(div);
+      scrollToBottom();
+      console.log(`[用户] ${text}`);
+      updateLogCount();
+    }
+
+    function addAIBubble() {
+      const div = document.createElement('div');
+      div.className = 'chat-bubble chat-ai';
+      div.innerHTML = '<span class="typing"></span><span class="cursor"></span>';
+      chat.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function scrollToBottom() {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      });
+    }
+
+    // ========== AI 流式回复 ==========
+    const AI_RESPONSES = [
+      '你好！我是 AI 助手，很高兴为你服务。这段文字是通过流式输出实时渲染的，你可以在 NextConsole 的 Console 面板中看到对应的流式日志条目（左侧有蓝色边框标记）。',
+      '移动端调试一直是前端开发的痛点。NextConsole 针对触屏交互进行了优化：浮动按钮支持拖拽和边缘吸附，面板支持手势调整高度，虚拟列表确保万级日志下依然流畅。',
+      '关于 AI 流式输出的技术实现：我们使用 requestAnimationFrame 批量合并 DOM 更新，避免了高频率 token 推送导致的 UI 卡顿。同时 appendStream API 支持按 streamId 将多个 chunk 合并为同一条日志。',
+      '你可以试试下面的快捷按钮：\n• 🌐 网络请求 — 查看 fetch/XHR 拦截\n• ❌ 模拟报错 — 测试错误捕获和堆栈\n• 💾 写入存储 — 查看 Storage 面板\n• ⚡ 压力测试 — 1000 条日志压测',
+      '代码质量方面，NextConsole 使用 Shadow DOM 实现完全隔离，不会污染宿主页面的样式和 DOM。销毁时会恢复所有被拦截的原生 API（console、fetch、XHR、EventSource）。',
+    ];
+
+    async function streamReply(text) {
+      const bubble = addAIBubble();
+      const typingEl = bubble.querySelector('.typing');
+      const cursorEl = bubble.querySelector('.cursor');
+      const streamId = `chat-${Date.now()}`;
+
+      console.info(`[AI] 开始流式回复 (streamId: ${streamId})`);
+      updateLogCount();
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        typingEl.textContent += char;
+        nc.appendStream(streamId, char);
+        scrollToBottom();
+        // 模拟不均匀的 token 速度
+        const delay = char === '\n' ? 100 : char === '。' || char === '！' ? 60 : 20 + Math.random() * 25;
+        await sleep(delay);
+      }
+
+      cursorEl.remove();
+      nc.endStream(streamId);
+      console.log(`[AI] 回复完成，共 ${text.length} 字`);
+      updateLogCount();
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ========== 发送消息 ==========
+    let replyIndex = 0;
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addUserBubble(text);
+      await sleep(400);
+      const reply = AI_RESPONSES[replyIndex % AI_RESPONSES.length];
+      replyIndex++;
+      await streamReply(reply);
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ========== 快捷操作 ==========
+    document.querySelector('.actions').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+
+      switch (action) {
+        case 'stream': {
+          addUserBubble('来一段 AI 流式回复');
+          await sleep(300);
+          await streamReply(AI_RESPONSES[replyIndex++ % AI_RESPONSES.length]);
+          break;
+        }
+
+        case 'fetch': {
+          console.info('⏳ 发起网络请求...');
+          updateLogCount();
+          try {
+            const [r1, r2] = await Promise.all([
+              fetch('https://jsonplaceholder.typicode.com/posts/1').then(r => r.json()),
+              fetch('https://jsonplaceholder.typicode.com/users/1').then(r => r.json()),
+            ]);
+            console.log('📥 GET /posts/1:', r1);
+            console.log('📥 GET /users/1:', r2);
+            updateLogCount(); updateLogCount();
+
+            await fetch('https://jsonplaceholder.typicode.com/posts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: '测试', body: 'NextConsole POST 测试', userId: 1 }),
+            });
+            console.log('📤 POST /posts 完成');
+            updateLogCount();
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://jsonplaceholder.typicode.com/todos/1');
+            xhr.onload = () => {
+              console.log('📡 XHR /todos/1:', JSON.parse(xhr.responseText));
+              updateLogCount();
+            };
+            xhr.send();
+          } catch (err) {
+            console.error('网络请求失败:', err);
+            updateLogCount();
+          }
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '✅ 已发起多个网络请求，切换到 Network 面板查看详情';
+          break;
+        }
+
+        case 'error': {
+          console.error('❌ 模拟的 JavaScript 错误', new Error('Something went wrong!'));
+          console.warn('⚠️ 这是一条警告信息', { code: 'ERR_DEMO', ts: Date.now() });
+          console.error('❌ 类型错误', new TypeError('Cannot read property "x" of undefined'));
+          updateLogCount(); updateLogCount(); updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '⚠️ 已生成错误日志，在 Console 面板中查看红色/黄色条目';
+          break;
+        }
+
+        case 'storage': {
+          localStorage.setItem('nc_user_prefs', JSON.stringify({
+            theme: 'dark', lang: 'zh-CN', fontSize: 14, notifications: true,
+          }));
+          localStorage.setItem('nc_chat_history', JSON.stringify([
+            { role: 'user', content: '你好' },
+            { role: 'assistant', content: '你好！有什么可以帮你的？' },
+          ]));
+          sessionStorage.setItem('nc_session_token', 'tok_' + Math.random().toString(36).slice(2));
+          document.cookie = `nc_visit=${Date.now()}; path=/; max-age=3600`;
+          console.log('💾 已写入 localStorage × 2, sessionStorage × 1, Cookie × 1');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '✅ 存储数据已写入，切换到 Storage 面板查看和编辑';
+          break;
+        }
+
+        case 'burst': {
+          console.info('⚡ 开始压力测试: 1000 条日志...');
+          updateLogCount();
+          const t0 = performance.now();
+          for (let i = 0; i < 1000; i++) {
+            const levels = ['log', 'info', 'warn', 'error', 'debug'];
+            console[levels[i % 5]](`[#${i}]`, { index: i, random: Math.random().toFixed(4), ts: Date.now() });
+          }
+          const elapsed = (performance.now() - t0).toFixed(1);
+          logCount += 1000;
+          logCountEl.textContent = `日志: ${logCount}`;
+          console.log(`✅ 1000 条日志完成，耗时 ${elapsed}ms`);
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = `⚡ 压力测试完成！1000 条日志写入耗时 ${elapsed}ms。面板应保持流畅滚动。`;
+          break;
+        }
+
+        case 'clear': {
+          nc.clearConsole();
+          nc.clearNetwork();
+          logCount = 0;
+          logCountEl.textContent = '日志: 0';
+          chat.innerHTML = '';
+          replyIndex = 0;
+          console.log('🧹 已清空所有日志和聊天记录');
+          updateLogCount();
+          break;
+        }
+      }
+    });
+
+    // ========== 初始欢迎 ==========
+    (async () => {
+      await sleep(500);
+      console.log('📱 移动端页面已加载', {
+        screen: `${screen.width}×${screen.height}`,
+        viewport: `${innerWidth}×${innerHeight}`,
+        dpr: devicePixelRatio,
+        ua: navigator.userAgent.slice(0, 60),
+      });
+      updateLogCount();
+
+      await streamReply('欢迎来到 NextConsole 移动端演示！👋\n\n试试输入消息或点击下方快捷按钮。我会以流式方式回复，所有交互日志都会被捕获到调试面板中。');
+    })();
+  </script>
+</body>
+</html>

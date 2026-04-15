@@ -120,6 +120,21 @@ export const THEME_CSS = `
   -webkit-user-select: none;
   flex-shrink: 0;
 }
+.nc-close-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--nc-text-secondary);
+  font-size: 16px;
+  font-family: var(--nc-font);
+  background: none;
+  border: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.nc-close-btn:hover {
+  color: var(--nc-error);
+}
 .nc-tab:hover {
   color: var(--nc-text);
 }
@@ -194,26 +209,22 @@ export const THEME_CSS = `
 
 /* Console Panel */
 .nc-console-list {
-  position: relative;
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-}
-.nc-console-viewport {
-  position: relative;
-  width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 .nc-log-entry {
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--nc-border);
   font-family: var(--nc-font);
   font-size: var(--nc-font-size);
   word-break: break-all;
   white-space: pre-wrap;
-  min-height: 20px;
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  line-height: 1.4;
 }
 .nc-log-entry:hover {
   background: var(--nc-bg-hover);
@@ -222,12 +233,13 @@ export const THEME_CSS = `
   color: var(--nc-text-muted);
   flex-shrink: 0;
   font-size: 10px;
-  margin-top: 2px;
+  line-height: 1.4;
+  padding-top: 1px;
 }
 .nc-log-body {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow-wrap: break-word;
 }
 .nc-log-level-log .nc-log-body { color: var(--nc-log); }
 .nc-log-level-info .nc-log-body { color: var(--nc-info); }
