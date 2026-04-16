@@ -40,3 +40,4 @@ export type { LogLevel, LogEntry, ConsoleOptions } from './console';
 export type { HttpMethod, RequestType, NetworkEntry, SSEEvent, StreamMessage, NetworkOptions } from './network';
 export type { StorageType, StorageEntry, StorageOptions } from './storage';
 export type { SystemInfo, PerformanceMetrics } from './system';
+export type { NextConsolePlugin, PluginAPI, PluginTab } from './plugin';

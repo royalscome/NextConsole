@@ -1,4 +1,4 @@
-import type { PanelTab, NextConsoleConfig } from '../types';
+import type { PanelTab, NextConsoleConfig, NextConsolePlugin, PluginAPI } from '../types';
 import { ConsoleCore } from '../core/console-core';
 import { NetworkCore } from '../core/network-core';
 import { StorageCore } from '../core/storage-core';
@@ -31,7 +31,7 @@ export class MainPanel {
   private shadow: ShadowRoot;
   private panelEl!: HTMLElement;
   private tabContentEl!: HTMLElement;
-  private activeTab: PanelTab;
+  private activeTab: string;
   private visible = false;
   private cleanups: (() => void)[] = [];
 
@@ -50,6 +50,13 @@ export class MainPanel {
   private elementPanel?: ElementPanel;
   private systemPanel?: SystemPanel;
   private replPanel?: ReplPanel;
+
+  // Plugins
+  private plugins: NextConsolePlugin[] = [];
+  private pluginTabs: { key: string; label: string }[] = [];
+  private pluginPanelsRendered = new Set<string>();
+  private pluginAPI?: PluginAPI;
+  private initialized = false;
 
   // Config
   private config: NextConsoleConfig;
@@ -102,6 +109,13 @@ export class MainPanel {
       if (this.config.panelHeight) {
         const h = clamp(this.config.panelHeight, 0.1, 0.9);
         this.panelEl.style.setProperty('--nc-panel-height', `${h * 100}vh`);
+      }
+
+      this.initialized = true;
+
+      // Initialize pending plugins
+      for (const plugin of this.plugins) {
+        this.initPlugin(plugin);
       }
 
       this.config.onReady?.();
@@ -164,7 +178,7 @@ export class MainPanel {
     tabBar.addEventListener('click', (e) => {
       const tabEl = (e.target as HTMLElement).closest('[data-nc-tab]') as HTMLElement;
       if (tabEl) {
-        this.switchTab(tabEl.dataset.ncTab as PanelTab);
+        this.switchTab(tabEl.dataset.ncTab as string);
       }
     });
 
@@ -172,7 +186,7 @@ export class MainPanel {
     this.activatePanel(this.activeTab);
   }
 
-  private switchTab(tab: PanelTab): void {
+  private switchTab(tab: string): void {
     if (tab === this.activeTab) return;
     this.activeTab = tab;
 
@@ -189,7 +203,7 @@ export class MainPanel {
     this.activatePanel(tab);
   }
 
-  private activatePanel(tab: PanelTab): void {
+  private activatePanel(tab: string): void {
     const pane = this.shadow.querySelector(`[data-nc-pane="${tab}"]`) as HTMLElement;
     if (!pane) return;
 
@@ -224,6 +238,17 @@ export class MainPanel {
       case 'repl':
         if (!this.replPanel) {
           this.replPanel = new ReplPanel(pane, this.replCore);
+        }
+        break;
+      default:
+        // Plugin tabs
+        if (tab.startsWith('plugin-') && !this.pluginPanelsRendered.has(tab)) {
+          const pluginName = tab.slice(7);
+          const plugin = this.plugins.find((p) => p.name === pluginName);
+          if (plugin?.tab) {
+            plugin.tab.render(pane, this.getPluginAPI());
+            this.pluginPanelsRendered.add(tab);
+          }
         }
         break;
     }
@@ -310,6 +335,69 @@ export class MainPanel {
     return this.storageCore;
   }
 
+  /** Register a plugin */
+  use(plugin: NextConsolePlugin): void {
+    // Deduplicate by name
+    if (this.plugins.some((p) => p.name === plugin.name)) return;
+    this.plugins.push(plugin);
+
+    if (this.initialized) {
+      this.initPlugin(plugin);
+    }
+  }
+
+  private getPluginAPI(): PluginAPI {
+    if (!this.pluginAPI) {
+      this.pluginAPI = {
+        consoleCore: this.consoleCore,
+        networkCore: this.networkCore,
+        storageCore: this.storageCore,
+        addStyle: (css: string) => {
+          const style = document.createElement('style');
+          style.textContent = css;
+          this.shadow.appendChild(style);
+        },
+        log: (...args: unknown[]) => {
+          console.log('[NextConsole Plugin]', ...args);
+        },
+        show: () => this.show(),
+        hide: () => this.hide(),
+      };
+    }
+    return this.pluginAPI;
+  }
+
+  private initPlugin(plugin: NextConsolePlugin): void {
+    const api = this.getPluginAPI();
+
+    // Add tab if plugin defines one
+    if (plugin.tab) {
+      const key = `plugin-${plugin.name}`;
+      this.pluginTabs.push({ key, label: plugin.tab.label });
+
+      // Add tab button
+      const tabBar = this.shadow.querySelector('.nc-tab-bar') as HTMLElement;
+      if (tabBar) {
+        const closeBtn = tabBar.querySelector('.nc-close-btn');
+        const tabEl = document.createElement('div');
+        tabEl.className = 'nc-tab';
+        tabEl.textContent = plugin.tab.label;
+        tabEl.dataset.ncTab = key;
+        tabBar.insertBefore(tabEl, closeBtn);
+      }
+
+      // Add tab pane
+      if (this.tabContentEl) {
+        const pane = document.createElement('div');
+        pane.className = 'nc-tab-pane';
+        pane.dataset.ncPane = key;
+        this.tabContentEl.appendChild(pane);
+      }
+    }
+
+    plugin.init?.(api);
+  }
+
   /** Completely destroy and clean up */
   destroy(): void {
     this.consolePanel?.destroy();
@@ -324,6 +412,14 @@ export class MainPanel {
     this.storageCore.destroy();
     this.elementCore.destroy();
     this.replCore.destroy();
+    // Destroy plugins
+    for (const plugin of this.plugins) {
+      plugin.tab?.destroy?.();
+      plugin.destroy?.();
+    }
+    this.plugins.length = 0;
+    this.pluginTabs.length = 0;
+    this.pluginPanelsRendered.clear();
     this.cleanups.forEach((fn) => fn());
     this.cleanups.length = 0;
     this.host.remove();

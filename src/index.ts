@@ -1,7 +1,7 @@
-import type { NextConsoleConfig, PanelTab, LogLevel, LogEntry, NetworkEntry } from './types';
+import type { NextConsoleConfig, PanelTab, LogLevel, LogEntry, NetworkEntry, NextConsolePlugin } from './types';
 import { MainPanel } from './ui/main-panel';
 
-export type { NextConsoleConfig, PanelTab, LogLevel, LogEntry, NetworkEntry };
+export type { NextConsoleConfig, PanelTab, LogLevel, LogEntry, NetworkEntry, NextConsolePlugin };
 export type {
   ConsoleOptions,
   NetworkOptions,
@@ -13,6 +13,8 @@ export type {
   SSEEvent,
   SystemInfo,
   PerformanceMetrics,
+  PluginAPI,
+  PluginTab,
 } from './types';
 
 /** Track singleton instance to prevent multiple hook conflicts */
@@ -106,6 +108,30 @@ export class NextConsole {
   /** Get all captured network entries */
   getNetworkEntries(): NetworkEntry[] {
     return this.panel.getNetworkCore().getEntries();
+  }
+
+  /**
+   * Register a plugin.
+   *
+   * @example
+   * ```js
+   * nc.use({
+   *   name: 'my-plugin',
+   *   tab: {
+   *     label: 'My Tab',
+   *     render(container, api) {
+   *       container.innerHTML = '<div>Hello from plugin!</div>';
+   *     },
+   *   },
+   *   init(api) {
+   *     api.log('Plugin loaded!');
+   *   },
+   * });
+   * ```
+   */
+  use(plugin: NextConsolePlugin): this {
+    this.panel.use(plugin);
+    return this;
   }
 
   /**

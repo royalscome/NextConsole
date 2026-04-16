@@ -1,6 +1,8 @@
 # NextConsole
 
-> Next-generation front-end debugging console. A modern replacement for vConsole with AI streaming log support, optimized for mobile H5 and modern web.
+> Next-generation front-end debugging console. A modern replacement for vConsole with AI streaming log support, REPL, plugin system, optimized for mobile H5 and modern web.
+
+[中文文档](README.zh-CN.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -12,10 +14,12 @@
 - **Storage Panel** — View/edit/delete `localStorage`, `sessionStorage`, and cookies with search and inline editing
 - **Element Panel** — Collapsible DOM tree viewer with hover-to-highlight
 - **System Panel** — UA, screen, device memory, network type, performance metrics (FP, FCP, heap)
+- **REPL Panel** — Execute JavaScript in global scope with command history (↑/↓), result formatting, and error display
+- **Plugin System** — Extend NextConsole with custom tabs, styles, and logic via a simple plugin API
 - **Shadow DOM Isolation** — No global CSS pollution, no DOM conflicts
 - **Zero Dependencies** — Pure vanilla TypeScript, no framework lock-in
 - **Mobile-First** — Touch-optimized, draggable float button with edge-snapping, responsive panels
-- **Small Bundle** — Target < 40KB minified
+- **Small Bundle** — ~18KB gzipped
 
 ## Quick Start
 
@@ -66,6 +70,59 @@ nc.endStream('chat-1');
 
 This avoids UI freezes even with thousands of rapid updates by batching renders via `requestAnimationFrame`.
 
+## Plugin System
+
+Extend NextConsole with custom panels and logic:
+
+```js
+const nc = new NextConsole();
+
+nc.use({
+  name: 'my-plugin',
+  version: '1.0.0',
+  tab: {
+    label: 'My Tab',
+    render(container, api) {
+      container.innerHTML = '<div>Hello from plugin!</div>';
+    },
+    destroy() { /* cleanup */ },
+  },
+  init(api) {
+    api.log('Plugin loaded!');
+    api.addStyle('.custom { color: red; }');
+  },
+  destroy() { /* cleanup */ },
+});
+```
+
+### Plugin API
+
+| Property / Method | Description |
+| --- | --- |
+| `api.consoleCore` | Access to the console core module |
+| `api.networkCore` | Access to the network core module |
+| `api.storageCore` | Access to the storage core module |
+| `api.addStyle(css)` | Inject custom CSS into the Shadow DOM |
+| `api.log(...args)` | Log messages through the console |
+| `api.show()` | Show the panel |
+| `api.hide()` | Hide the panel |
+
+### Plugin Interface
+
+```ts
+interface NextConsolePlugin {
+  name: string;           // Unique plugin name
+  version?: string;       // Plugin version
+  tab?: {                 // Optional custom tab
+    label: string;
+    render(container: HTMLElement, api: PluginAPI): void;
+    destroy?(): void;
+  };
+  init?(api: PluginAPI): void;    // Called on install
+  destroy?(): void;               // Called on cleanup
+}
+```
+
 ## Configuration
 
 ```ts
@@ -73,7 +130,7 @@ interface NextConsoleConfig {
   /** Mount target (default: document.body) */
   target?: HTMLElement;
   /** Default active tab */
-  defaultTab?: 'console' | 'network' | 'storage' | 'element' | 'system';
+  defaultTab?: 'console' | 'network' | 'storage' | 'element' | 'system' | 'repl';
   /** Initial panel height ratio 0-1 (default: 0.4) */
   panelHeight?: number;
   /** Float button initial position */
@@ -119,6 +176,7 @@ interface NextConsoleConfig {
 | `nc.exportLogs()` | Export logs as JSON string |
 | `nc.getLogEntries()` | Get all log entries |
 | `nc.getNetworkEntries()` | Get all network entries |
+| `nc.use(plugin)` | Register a plugin (chainable) |
 | `nc.destroy()` | Destroy and clean up everything |
 
 ## Development
@@ -154,15 +212,17 @@ src/
 │   ├── network-core.ts    # Fetch/XHR/SSE/WebSocket interception
 │   ├── storage-core.ts    # Storage read/write
 │   ├── element-core.ts    # DOM tree & highlight
-│   └── system-core.ts     # System info collection
+│   ├── system-core.ts     # System info collection
+│   └── repl-core.ts       # JS command execution
 ├── ui/                # UI components
-│   ├── main-panel.ts      # Panel shell & tab management
+│   ├── main-panel.ts      # Panel shell, tabs & plugin management
 │   ├── float-button.ts    # Draggable float button
 │   ├── console-panel.ts   # Console tab (virtual list)
 │   ├── network-panel.ts   # Network tab (sortable table)
 │   ├── storage-panel.ts   # Storage tab (CRUD)
 │   ├── element-panel.ts   # Element tab (DOM tree)
-│   └── system-panel.ts    # System tab
+│   ├── system-panel.ts    # System tab
+│   └── repl-panel.ts      # REPL tab (JS execution)
 ├── utils/             # Helpers
 │   ├── dom.ts             # DOM utilities
 │   ├── json.ts            # JSON highlighting & stringify
@@ -175,7 +235,8 @@ src/
 │   ├── console.ts
 │   ├── network.ts
 │   ├── storage.ts
-│   └── system.ts
+│   ├── system.ts
+│   └── plugin.ts          # Plugin system types
 └── index.ts           # Public API entry point
 ```
 
