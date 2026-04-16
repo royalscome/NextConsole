@@ -12,6 +12,7 @@ export class StoragePanel {
   private searchText = '';
   private activeType: StorageType | 'all' = 'all';
   private cleanups: (() => void)[] = [];
+  private currentEntries: { key: string; value: string; type: StorageType }[] = [];
 
   constructor(container: HTMLElement, core: StorageCore) {
     this.container = container;
@@ -35,10 +36,10 @@ export class StoragePanel {
         <table class="nc-storage-table">
           <thead>
             <tr>
-              <th style="width:30%">Key</th>
-              <th style="width:40%">Value</th>
-              <th style="width:15%">Type</th>
-              <th style="width:15%">Actions</th>
+              <th style="width:25%">Key</th>
+              <th>Value</th>
+              <th style="width:auto">Type</th>
+              <th style="width:1%">Actions</th>
             </tr>
           </thead>
           <tbody class="nc-storage-tbody"></tbody>
@@ -83,19 +84,43 @@ export class StoragePanel {
       this.refreshTable();
     });
 
-    // Table actions (edit, delete) via delegation
+    // Table actions (edit, delete, expand) via delegation
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.dataset.ncAction === 'edit') {
         const key = target.dataset.ncKey!;
         const type = target.dataset.ncType as StorageType;
         this.showEditDialog(type, key);
+        return;
       }
       if (target.dataset.ncAction === 'delete') {
         const key = target.dataset.ncKey!;
         const type = target.dataset.ncType as StorageType;
         this.core.removeItem(type, key);
         this.refreshTable();
+        return;
+      }
+      // Click row to expand/collapse
+      const tr = target.closest('tr[data-nc-row]') as HTMLElement;
+      if (tr && !target.closest('.nc-storage-actions')) {
+        const detailRow = tr.nextElementSibling as HTMLElement;
+        if (detailRow && detailRow.classList.contains('nc-storage-detail')) {
+          tr.classList.remove('nc-storage-expanded');
+          detailRow.remove();
+        } else {
+          // Collapse any other expanded row
+          this.tableBody?.querySelectorAll('.nc-storage-detail').forEach(el => {
+            el.previousElementSibling?.classList.remove('nc-storage-expanded');
+            el.remove();
+          });
+          tr.classList.add('nc-storage-expanded');
+          const idx = parseInt(tr.dataset.ncIdx || '0', 10);
+          const fullValue = this.currentEntries[idx]?.value || '';
+          const detail = document.createElement('tr');
+          detail.className = 'nc-storage-detail';
+          detail.innerHTML = `<td colspan="4">${escapeHTML(fullValue)}</td>`;
+          tr.after(detail);
+        }
       }
     });
 
@@ -113,13 +138,16 @@ export class StoragePanel {
       entries = entries.filter((e) => e.type === this.activeType);
     }
 
+    this.currentEntries = entries;
+
     let html = '';
-    for (const entry of entries) {
-      const shortVal = entry.value.length > 100 ? entry.value.slice(0, 100) + '…' : entry.value;
-      html += `<tr>`;
-      html += `<td title="${escapeHTML(entry.key)}">${escapeHTML(entry.key)}</td>`;
-      html += `<td title="${escapeHTML(entry.value)}">${escapeHTML(shortVal)}</td>`;
-      html += `<td>${entry.type}</td>`;
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const shortVal = entry.value.length > 60 ? entry.value.slice(0, 60) + '…' : entry.value;
+      html += `<tr data-nc-row data-nc-idx="${i}" style="cursor:pointer">`;
+      html += `<td>${escapeHTML(entry.key)}</td>`;
+      html += `<td>${escapeHTML(shortVal)}</td>`;
+      html += `<td class="nc-storage-type">${entry.type}</td>`;
       html += `<td class="nc-storage-actions">`;
       html += `<button data-nc-action="edit" data-nc-key="${escapeHTML(entry.key)}" data-nc-type="${entry.type}">Edit</button>`;
       html += `<button class="nc-danger" data-nc-action="delete" data-nc-key="${escapeHTML(entry.key)}" data-nc-type="${entry.type}">Del</button>`;

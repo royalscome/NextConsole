@@ -121,6 +121,14 @@ export class MainPanel {
       tabEl.dataset.ncTab = tab.key;
       tabBar.appendChild(tabEl);
     }
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'nc-close-btn';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => this.hide());
+    tabBar.appendChild(closeBtn);
+
     this.panelEl.appendChild(tabBar);
 
     // Tab content area
