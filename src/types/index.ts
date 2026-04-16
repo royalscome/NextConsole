@@ -16,7 +16,7 @@ export interface NextConsoleConfig {
   /** Float button position */
   buttonPosition?: { x: number; y: number };
   /** Theme: 'dark' only for now */
-  theme?: 'dark';
+  theme?: 'dark' | 'light';
   /** Console panel options */
   console?: Partial<ConsoleOptions>;
   /** Network panel options */

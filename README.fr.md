@@ -18,8 +18,9 @@
 - **Systeme de plugins** - Etendez NextConsole avec des onglets, styles et logiques personnalises via une API simple
 - **Isolation Shadow DOM** - Pas de pollution CSS globale, pas de conflit DOM
 - **Zero dependance** - TypeScript pur, sans verrouillage sur un framework
+- **Theme sombre / clair** - Themes sombre et clair integres, commutables a l'execution via `setTheme()`
 - **Mobile-first** - Optimise pour le tactile, bouton flottant draggable avec aimantation aux bords et panneaux responsives
-- **Petit bundle** - Environ 22 KB gzippes (avec plugins integres)
+- **Petit bundle** - Environ 23 KB gzippes (avec plugins integres)
 
 ## Comparaison
 
@@ -27,12 +28,12 @@
 
 | Outil | Minifie | Gzippe | Dependances |
 | --- | --- | --- | --- |
-| **NextConsole** | **97 KB** | **22 KB** | **0** |
+| **NextConsole** | **99 KB** | **23 KB** | **0** |
 | vConsole 3.15 | 277 KB | 76 KB | 4 |
 | Eruda 3.4 | 485 KB | 147 KB | 0 (integrees) |
 | Chii 1.15 | N/A (serveur) | N/A | 9 |
 
-NextConsole est **3,5x plus petit** que vConsole et **6,7x plus petit** que Eruda (en gzip).
+NextConsole est **3,3x plus petit** que vConsole et **6,4x plus petit** que Eruda (en gzip).
 
 ### Comparatif des fonctionnalites
 
@@ -54,7 +55,7 @@ NextConsole est **3,5x plus petit** que vConsole et **6,7x plus petit** que Erud
 | Isolation Shadow DOM | ✅ | ❌ | ❌ | N/A |
 | Zero dependance | ✅ | ❌ (4 deps) | ✅ (bundle) | ❌ (9 deps) |
 | TypeScript natif | ✅ | ✅ | ✅ | ❌ |
-| Theme sombre | ✅ | ✅ | ✅ | ✅ |
+| Theme sombre / clair | ✅ Les deux | ✅ Sombre seul | ✅ Les deux | ✅ Sombre seul |
 | Optimise mobile | ✅ | ✅ | ✅ | ❌ |
 | Debogage distant | ❌ | ❌ | ❌ | ✅ |
 | Derniere mise a jour | 2026 | 2023 | 2025 | 2025 |
@@ -93,11 +94,16 @@ import NextConsole from '@royalscome/nextconsole';
 const nc = new NextConsole({
   defaultTab: 'console',
   panelHeight: 0.4,
+  theme: 'light', // 'dark' (par defaut) ou 'light'
 });
 
 // Afficher / masquer
 nc.show();
 nc.hide();
+
+// Changer de theme a l'execution
+nc.setTheme('dark');
+nc.setTheme('light');
 nc.toggle();
 ```
 
@@ -211,7 +217,7 @@ interface NextConsoleConfig {
   /** Position initiale du bouton flottant */
   buttonPosition?: { x: number; y: number };
   /** Theme */
-  theme?: 'dark';
+  theme?: 'dark' | 'light';  // par defaut : 'dark'
   /** Options de console */
   console?: {
     maxLogs?: number;      // par defaut : 10000
@@ -244,6 +250,7 @@ interface NextConsoleConfig {
 | `nc.hide()` | Masque le panneau |
 | `nc.toggle()` | Bascule la visibilite du panneau |
 | `nc.isVisible` | Verifie si le panneau est visible |
+| `nc.setTheme(theme)` | Change le theme (`'dark'` ou `'light'`) a l'execution |
 | `nc.appendStream(id, chunk)` | Ajoute un fragment a un log en streaming |
 | `nc.endStream(id)` | Marque un flux comme termine |
 | `nc.clearConsole()` | Efface tous les journaux console |

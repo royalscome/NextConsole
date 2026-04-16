@@ -88,6 +88,11 @@ export class NextConsole {
     this.panel.getConsoleCore().endStream(streamId);
   }
 
+  /** Set theme at runtime */
+  setTheme(theme: 'dark' | 'light'): void {
+    this.panel.setTheme(theme);
+  }
+
   /** Clear all console logs */
   clearConsole(): void {
     this.panel.getConsoleCore().clear();

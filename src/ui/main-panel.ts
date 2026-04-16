@@ -89,6 +89,9 @@ export class MainPanel {
       style.textContent = THEME_CSS;
       this.shadow.appendChild(style);
 
+      // Apply theme
+      this.applyTheme(this.config.theme || 'dark');
+
       // Create float button
       this.floatButton = new FloatButton(
         this.shadow,
@@ -333,6 +336,19 @@ export class MainPanel {
   /** Get the storage core for API access */
   getStorageCore(): StorageCore {
     return this.storageCore;
+  }
+
+  /** Set theme */
+  setTheme(theme: 'dark' | 'light'): void {
+    this.applyTheme(theme);
+  }
+
+  private applyTheme(theme: 'dark' | 'light'): void {
+    if (theme === 'light') {
+      this.host.classList.add('nc-theme-light');
+    } else {
+      this.host.classList.remove('nc-theme-light');
+    }
   }
 
   /** Register a plugin */

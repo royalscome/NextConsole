@@ -18,8 +18,9 @@
 - **Plugin System** — Extend NextConsole with custom tabs, styles, and logic via a simple plugin API
 - **Shadow DOM Isolation** — No global CSS pollution, no DOM conflicts
 - **Zero Dependencies** — Pure vanilla TypeScript, no framework lock-in
+- **Dark / Light Theme** — Built-in dark and light themes, switchable at runtime via `setTheme()`
 - **Mobile-First** — Touch-optimized, draggable float button with edge-snapping, responsive panels
-- **Small Bundle** — ~22KB gzipped (with built-in plugins)
+- **Small Bundle** — ~23KB gzipped (with built-in plugins)
 
 ## Comparison
 
@@ -27,12 +28,12 @@
 
 | Tool | Minified | Gzipped | Dependencies |
 | --- | --- | --- | --- |
-| **NextConsole** | **97 KB** | **22 KB** | **0** |
+| **NextConsole** | **99 KB** | **23 KB** | **0** |
 | vConsole 3.15 | 277 KB | 76 KB | 4 |
 | Eruda 3.4 | 485 KB | 147 KB | 0 (bundled) |
 | Chii 1.15 | N/A (server) | N/A | 9 |
 
-NextConsole is **3.5x smaller** than vConsole and **6.7x smaller** than Eruda (gzipped).
+NextConsole is **3.3x smaller** than vConsole and **6.4x smaller** than Eruda (gzipped).
 
 ### Feature Comparison
 
@@ -54,7 +55,7 @@ NextConsole is **3.5x smaller** than vConsole and **6.7x smaller** than Eruda (g
 | Shadow DOM Isolation | ✅ | ❌ | ❌ | N/A |
 | Zero Dependencies | ✅ | ❌ (4 deps) | ✅ (bundled) | ❌ (9 deps) |
 | TypeScript Native | ✅ | ✅ | ✅ | ❌ |
-| Dark Theme | ✅ | ✅ | ✅ | ✅ |
+| Dark / Light Theme | ✅ Both | ✅ Dark only | ✅ Both | ✅ Dark only |
 | Mobile Optimized | ✅ | ✅ | ✅ | ❌ |
 | Remote Debugging | ❌ | ❌ | ❌ | ✅ |
 | Last Updated | 2026 | 2023 | 2025 | 2025 |
@@ -93,11 +94,16 @@ import NextConsole from '@royalscome/nextconsole';
 const nc = new NextConsole({
   defaultTab: 'console',
   panelHeight: 0.4,
+  theme: 'light', // 'dark' (default) or 'light'
 });
 
 // Show/hide
 nc.show();
 nc.hide();
+
+// Switch theme at runtime
+nc.setTheme('dark');
+nc.setTheme('light');
 nc.toggle();
 ```
 
@@ -211,7 +217,7 @@ interface NextConsoleConfig {
   /** Float button initial position */
   buttonPosition?: { x: number; y: number };
   /** Theme */
-  theme?: 'dark';
+  theme?: 'dark' | 'light';  // default: 'dark'
   /** Console options */
   console?: {
     maxLogs?: number;      // default: 10000
@@ -244,6 +250,7 @@ interface NextConsoleConfig {
 | `nc.hide()` | Hide the panel |
 | `nc.toggle()` | Toggle panel visibility |
 | `nc.isVisible` | Check if panel is visible |
+| `nc.setTheme(theme)` | Switch theme (`'dark'` or `'light'`) at runtime |
 | `nc.appendStream(id, chunk)` | Append chunk to a streaming log |
 | `nc.endStream(id)` | Mark a stream as complete |
 | `nc.clearConsole()` | Clear all console logs |
