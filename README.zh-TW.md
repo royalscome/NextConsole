@@ -2,7 +2,7 @@
 
 > 新一代前端除錯主控台。vConsole 的現代化替代方案，支援 AI 串流日誌、REPL、外掛系統，專為行動端 H5 與現代 Web 最佳化。
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md) | [Français](README.fr.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 

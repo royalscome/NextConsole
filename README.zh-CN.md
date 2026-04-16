@@ -2,7 +2,7 @@
 
 > 新一代前端调试控制台。vConsole 的现代替代品，支持 AI 流式日志、REPL 命令执行、插件系统，专为移动端 H5 和现代 Web 优化。
 
-[English](README.md)
+[English](README.md) | [繁體中文](README.zh-TW.md) | [Français](README.fr.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 

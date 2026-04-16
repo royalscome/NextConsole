@@ -2,7 +2,7 @@
 
 > Next-generation front-end debugging console. A modern replacement for vConsole with AI streaming log support, REPL, plugin system, optimized for mobile H5 and modern web.
 
-[中文文档](README.zh-CN.md)
+[中文文档](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [Français](README.fr.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
