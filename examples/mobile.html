@@ -218,18 +218,28 @@
       <div class="action-btn" data-action="sse">📡 SSE</div>
       <div class="action-btn" data-action="ws">🔌 WebSocket</div>
       <div class="action-btn" data-action="burst">⚡ 压力测试</div>
+      <div class="action-btn" data-action="element">🌲 DOM 树</div>
+      <div class="action-btn" data-action="system">📊 系统信息</div>
+      <div class="action-btn" data-action="source">📄 Source</div>
+      <div class="action-btn" data-action="perf">🏎️ Perf</div>
+      <div class="action-btn" data-action="repl">⌨️ REPL</div>
+      <div class="action-btn" data-action="plugin">🧩 插件测试</div>
+      <div class="action-btn" data-action="all">🔥 全部测试</div>
       <div class="action-btn" data-action="clear">🧹 清空</div>
     </div>
   </div>
 
   <script type="module">
     import NextConsole from '../src/index.ts';
+    import { createSourcePlugin } from '../src/plugins/source-plugin.ts';
+    import { createPerformancePlugin } from '../src/plugins/performance-plugin.ts';
 
     const nc = new NextConsole({
       defaultTab: 'console',
       panelHeight: 0.45,
       buttonPosition: { x: window.innerWidth - 64, y: window.innerHeight - 160 },
     });
+    nc.use(createSourcePlugin()).use(createPerformancePlugin());
     window.nc = nc;
 
     const chat = document.getElementById('chat');
@@ -593,6 +603,220 @@
           replyIndex = 0;
           console.log('🧹 已清空所有日志和聊天记录');
           updateLogCount();
+          break;
+        }
+
+        case 'element': {
+          // Create some test DOM to inspect
+          const testDiv = document.createElement('div');
+          testDiv.id = 'test-element-demo';
+          testDiv.innerHTML = `
+            <section class="demo-section">
+              <h3>动态生成的 DOM 结构</h3>
+              <ul>
+                <li data-id="1">列表项 1 <span class="badge">new</span></li>
+                <li data-id="2">列表项 2</li>
+                <li data-id="3">列表项 3 <a href="#">链接</a></li>
+              </ul>
+              <div class="nested">
+                <p>嵌套段落 <strong>加粗文字</strong> <em>斜体文字</em></p>
+                <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="1px" width="1" height="1" />
+              </div>
+            </section>
+          `;
+          document.body.insertBefore(testDiv, document.querySelector('.bottom-bar'));
+          console.log('🌲 已创建测试 DOM 结构，切换到 Element 面板查看');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '🌲 已生成测试 DOM，切换到 Element 面板可查看 DOM 树、悬浮高亮元素';
+          break;
+        }
+
+        case 'system': {
+          console.log('📊 系统信息测试 — 切换到 System 面板查看');
+          console.info('📊 当前信息:', {
+            screen: `${screen.width}×${screen.height}`,
+            viewport: `${innerWidth}×${innerHeight}`,
+            dpr: devicePixelRatio,
+            language: navigator.language,
+            cookieEnabled: navigator.cookieEnabled,
+            onLine: navigator.onLine,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            maxTouchPoints: navigator.maxTouchPoints,
+          });
+          updateLogCount(); updateLogCount();
+
+          // Trigger some performance entries
+          performance.mark('nc-test-start');
+          let sum = 0;
+          for (let i = 0; i < 1e6; i++) sum += Math.random();
+          performance.mark('nc-test-end');
+          performance.measure('nc-test-compute', 'nc-test-start', 'nc-test-end');
+          const measure = performance.getEntriesByName('nc-test-compute')[0];
+          console.log(`📊 计算耗时: ${measure.duration.toFixed(2)}ms (100万次随机数求和)`);
+          updateLogCount();
+
+          nc.show();
+          // Switch to system tab
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '📊 切换到 System 面板查看 UA、屏幕、设备内存、性能指标等系统信息';
+          break;
+        }
+
+        case 'source': {
+          // Add some inline script/style for testing
+          const testStyle = document.createElement('style');
+          testStyle.textContent = '.source-test-class { color: #58a6ff; font-weight: bold; }';
+          document.head.appendChild(testStyle);
+
+          const testScript = document.createElement('script');
+          testScript.textContent = 'window.__sourcePluginTest = "Source plugin works!";';
+          document.head.appendChild(testScript);
+
+          console.log('📄 已添加测试内联样式和脚本');
+          console.info('📄 切换到 Source 面板查看所有页面资源（外部引用 & 内联）');
+          updateLogCount(); updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '📄 Source 插件可查看页面所有脚本/样式资源，点击可查看完整源码';
+          break;
+        }
+
+        case 'perf': {
+          console.log('🏎️ Performance 插件测试');
+          updateLogCount();
+
+          // Generate some resource loading for profiling
+          performance.mark('nc-perf-test');
+          const img = new Image();
+          img.src = `https://picsum.photos/200/200?r=${Math.random()}`;
+          img.onload = () => {
+            console.log('🏎️ 测试图片加载完成');
+            updateLogCount();
+          };
+          img.onerror = () => {
+            console.warn('🏎️ 测试图片加载失败（网络问题），但 Perf 面板仍可查看其他资源');
+            updateLogCount();
+          };
+
+          // Simulate some work to generate long task entries
+          const heavy = () => {
+            const t = performance.now();
+            while (performance.now() - t < 80) { Math.random(); }
+          };
+          heavy();
+
+          console.info('🏎️ 切换到 Perf 面板查看核心指标、资源分布、长任务检测');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '🏎️ Perf 插件展示 TTFB/FCP/FP/堆内存等指标，资源按类型分布，支持添加自定义 Mark';
+          break;
+        }
+
+        case 'repl': {
+          console.log('⌨️ REPL 测试 — 切换到 REPL 面板');
+          console.info('⌨️ 在 REPL 面板中可以执行任意 JavaScript，试试以下命令:');
+          console.log('  document.title');
+          console.log('  navigator.userAgent');
+          console.log('  performance.now()');
+          console.log('  nc.getLogEntries().length');
+          console.log('  JSON.stringify({a:1, b:[2,3]})');
+          updateLogCount(); updateLogCount(); updateLogCount(); updateLogCount(); updateLogCount(); updateLogCount();
+
+          // Pre-populate some global test vars
+          window.__replTestData = {
+            name: 'NextConsole REPL 测试',
+            items: [1, 2, 3, { nested: true }],
+            fn: function hello() { return 'Hello from REPL!'; }
+          };
+          console.log('⌨️ 已设置 window.__replTestData，在 REPL 中输入 __replTestData 查看');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '⌨️ 切换到 REPL 面板，输入 JS 代码执行。支持↑/↓浏览历史，试试 __replTestData';
+          break;
+        }
+
+        case 'plugin': {
+          console.log('🧩 插件系统测试');
+          updateLogCount();
+
+          // Register a custom plugin on the fly
+          nc.use({
+            name: 'demo-plugin',
+            version: '1.0.0',
+            tab: {
+              label: 'Demo',
+              render(container, api) {
+                container.innerHTML = `
+                  <div style="padding:16px;color:var(--nc-text);">
+                    <h3 style="color:var(--nc-accent);margin-bottom:12px;">🧩 自定义插件 Demo</h3>
+                    <p style="margin-bottom:8px;color:var(--nc-text-secondary);font-size:12px;">
+                      这是一个通过 <code>nc.use()</code> 动态注册的插件面板。
+                    </p>
+                    <div style="margin-bottom:12px;">
+                      <button id="demo-plugin-log" style="padding:6px 12px;background:var(--nc-accent);border:none;color:#fff;border-radius:4px;cursor:pointer;margin-right:6px;font-size:12px;">通过插件 API 打印日志</button>
+                      <button id="demo-plugin-count" style="padding:6px 12px;background:var(--nc-bg-secondary);border:1px solid var(--nc-border);color:var(--nc-text);border-radius:4px;cursor:pointer;font-size:12px;">查看日志数量</button>
+                    </div>
+                    <div id="demo-plugin-output" style="padding:10px;background:var(--nc-bg-secondary);border:1px solid var(--nc-border);border-radius:4px;font-size:12px;color:var(--nc-info);min-height:40px;">
+                      等待操作...
+                    </div>
+                  </div>
+                `;
+                const output = container.querySelector('#demo-plugin-output');
+                container.querySelector('#demo-plugin-log').addEventListener('click', () => {
+                  api.log('🧩 来自插件的日志', { time: new Date().toLocaleTimeString(), random: Math.random() });
+                  output.textContent = '✅ 已通过 api.log() 打印日志，切换到 Console 面板查看';
+                });
+                container.querySelector('#demo-plugin-count').addEventListener('click', () => {
+                  const count = api.consoleCore.getEntries().length;
+                  output.textContent = `📊 当前共有 ${count} 条日志`;
+                });
+              },
+              destroy() {},
+            },
+            init(api) {
+              api.addStyle('#demo-plugin-log:hover { opacity: 0.85; }');
+              api.log('🧩 Demo 插件已初始化');
+            },
+          });
+
+          console.info('🧩 已注册 Demo 插件，面板标签栏新增了 "Demo" 标签');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '🧩 已动态注册自定义插件！滑到标签栏最右侧找到 "Demo" 标签。内置的 Source 和 Perf 插件也已加载。';
+          break;
+        }
+
+        case 'all': {
+          console.log('🔥 开始全功能测试...');
+          updateLogCount();
+
+          const bubble = addAIBubble();
+          bubble.querySelector('.cursor').remove();
+          bubble.querySelector('.typing').textContent = '🔥 依次执行所有测试，请稍候...';
+
+          const actions = ['storage', 'error', 'fetch', 'element', 'source', 'perf', 'repl', 'plugin'];
+          for (let i = 0; i < actions.length; i++) {
+            await sleep(300);
+            const btn = document.querySelector(`[data-action="${actions[i]}"]`);
+            if (btn) btn.click();
+          }
+
+          await sleep(500);
+          // Trigger stream last
+          addUserBubble('全功能测试完成！');
+          await sleep(300);
+          await streamReply('🎉 所有功能测试完成！\n\n✅ Console — 日志捕获、错误/警告堆栈\n✅ Network — Fetch/XHR 拦截\n✅ Storage — localStorage/sessionStorage/Cookie\n✅ Element — DOM 树查看\n✅ System — 系统信息\n✅ REPL — JS 命令执行\n✅ Source — 源码查看插件\n✅ Perf — 性能分析插件\n✅ Plugin — 自定义插件注册\n\n你可以逐个面板查看各项功能的测试结果。');
           break;
         }
       }

@@ -1,6 +1,6 @@
 {
   "name": "@royalscome/nextconsole",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Next-generation front-end debugging console. Replaces vConsole with AI streaming log support, modern web & mobile H5 optimization.",
   "main": "dist/nextconsole.umd.js",
   "module": "dist/nextconsole.es.js",

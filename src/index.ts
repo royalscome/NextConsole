@@ -17,6 +17,9 @@ export type {
   PluginTab,
 } from './types';
 
+export { createSourcePlugin } from './plugins/source-plugin';
+export { createPerformancePlugin } from './plugins/performance-plugin';
+
 /** Track singleton instance to prevent multiple hook conflicts */
 let _instance: NextConsole | null = null;
 

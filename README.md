@@ -19,7 +19,56 @@
 - **Shadow DOM Isolation** — No global CSS pollution, no DOM conflicts
 - **Zero Dependencies** — Pure vanilla TypeScript, no framework lock-in
 - **Mobile-First** — Touch-optimized, draggable float button with edge-snapping, responsive panels
-- **Small Bundle** — ~18KB gzipped
+- **Small Bundle** — ~22KB gzipped (with built-in plugins)
+
+## Comparison
+
+### Bundle Size
+
+| Tool | Minified | Gzipped | Dependencies |
+| --- | --- | --- | --- |
+| **NextConsole** | **97 KB** | **22 KB** | **0** |
+| vConsole 3.15 | 277 KB | 76 KB | 4 |
+| Eruda 3.4 | 485 KB | 147 KB | 0 (bundled) |
+| Chii 1.15 | N/A (server) | N/A | 9 |
+
+NextConsole is **3.5x smaller** than vConsole and **6.7x smaller** than Eruda (gzipped).
+
+### Feature Comparison
+
+| Feature | NextConsole | vConsole | Eruda | Chii |
+| --- | :---: | :---: | :---: | :---: |
+| Console Log | ✅ | ✅ | ✅ | ✅ |
+| AI Streaming Log | ✅ | ❌ | ❌ | ❌ |
+| Network (Fetch) | ✅ | ✅ | ✅ | ✅ |
+| Network (XHR) | ✅ | ✅ | ✅ | ✅ |
+| Network (SSE) | ✅ Real-time | ❌ | ❌ | ✅ |
+| Network (WebSocket) | ✅ Real-time | ❌ | ❌ | ✅ |
+| Storage | ✅ CRUD | ✅ CRUD | ✅ CRUD | ✅ |
+| DOM Element | ✅ | ✅ | ✅ | ✅ |
+| System Info | ✅ | ✅ | ✅ | ✅ |
+| REPL / JS Execute | ✅ | ✅ | ✅ | ✅ |
+| Performance Profiling | ✅ Plugin | ❌ | ❌ | ✅ |
+| Source Viewer | ✅ Plugin | ❌ (3rd party) | ✅ | ✅ |
+| Plugin System | ✅ | ✅ | ✅ | ❌ |
+| Shadow DOM Isolation | ✅ | ❌ | ❌ | N/A |
+| Zero Dependencies | ✅ | ❌ (4 deps) | ✅ (bundled) | ❌ (9 deps) |
+| TypeScript Native | ✅ | ✅ | ✅ | ❌ |
+| Dark Theme | ✅ | ✅ | ✅ | ✅ |
+| Mobile Optimized | ✅ | ✅ | ✅ | ❌ |
+| Remote Debugging | ❌ | ❌ | ❌ | ✅ |
+| Last Updated | 2026 | 2023 | 2025 | 2025 |
+
+### Architecture
+
+| Aspect | NextConsole | vConsole | Eruda | Chii |
+| --- | --- | --- | --- | --- |
+| Rendering | Shadow DOM | `<div>` in body | `<div>` in body | Chrome DevTools |
+| CSS Isolation | Full (Shadow DOM) | Scoped class | Scoped class | iframe |
+| Build Format | ES + UMD | UMD | UMD | Server + Client |
+| Framework | None | None | None | Node.js server |
+| Log Rendering | Virtual List (10K+) | DOM append | DOM append | DevTools native |
+| Streaming | RAF batch | N/A | N/A | N/A |
 
 ## Quick Start
 
@@ -121,6 +170,32 @@ interface NextConsolePlugin {
   init?(api: PluginAPI): void;    // Called on install
   destroy?(): void;               // Called on cleanup
 }
+```
+
+### Built-in Plugins
+
+NextConsole ships with two official plugins:
+
+#### Source Plugin
+
+View all page scripts and stylesheets (external & inline) with full source code viewer:
+
+```js
+import NextConsole, { createSourcePlugin } from '@royalscome/nextconsole';
+
+const nc = new NextConsole();
+nc.use(createSourcePlugin());
+```
+
+#### Performance Plugin
+
+Core Web Vitals, resource breakdown, long task detection, and custom performance marks:
+
+```js
+import NextConsole, { createPerformancePlugin } from '@royalscome/nextconsole';
+
+const nc = new NextConsole();
+nc.use(createPerformancePlugin());
 ```
 
 ## Configuration
@@ -237,6 +312,10 @@ src/
 │   ├── storage.ts
 │   ├── system.ts
 │   └── plugin.ts          # Plugin system types
+├── plugins/           # Built-in plugins
+│   ├── index.ts
+│   ├── source-plugin.ts   # Source code viewer
+│   └── performance-plugin.ts  # Performance profiling
 └── index.ts           # Public API entry point
 ```
 

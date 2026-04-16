@@ -19,7 +19,56 @@
 - **Shadow DOM 隔离** — 无全局 CSS 污染，无 DOM 冲突
 - **零依赖** — 纯 TypeScript 实现，不绑定任何框架
 - **移动端优先** — 触控优化，可拖拽悬浮按钮带边缘吸附，响应式面板
-- **体积小巧** — gzip 后约 18KB
+- **体积小巧** — gzip 后约 22KB（含内置插件）
+
+## 对比
+
+### 包体积
+
+| 工具 | 压缩后 | Gzip | 依赖数 |
+| --- | --- | --- | --- |
+| **NextConsole** | **97 KB** | **22 KB** | **0** |
+| vConsole 3.15 | 277 KB | 76 KB | 4 |
+| Eruda 3.4 | 485 KB | 147 KB | 0（内置打包） |
+| Chii 1.15 | N/A（服务端） | N/A | 9 |
+
+NextConsole 比 vConsole 小 **3.5 倍**，比 Eruda 小 **6.7 倍**（gzip 后）。
+
+### 功能对比
+
+| 功能 | NextConsole | vConsole | Eruda | Chii |
+| --- | :---: | :---: | :---: | :---: |
+| Console 日志 | ✅ | ✅ | ✅ | ✅ |
+| AI 流式日志 | ✅ | ❌ | ❌ | ❌ |
+| 网络 (Fetch) | ✅ | ✅ | ✅ | ✅ |
+| 网络 (XHR) | ✅ | ✅ | ✅ | ✅ |
+| 网络 (SSE) | ✅ 实时消息流 | ❌ | ❌ | ✅ |
+| 网络 (WebSocket) | ✅ 实时消息流 | ❌ | ❌ | ✅ |
+| 存储 | ✅ 增删改查 | ✅ 增删改查 | ✅ 增删改查 | ✅ |
+| DOM 元素 | ✅ | ✅ | ✅ | ✅ |
+| 系统信息 | ✅ | ✅ | ✅ | ✅ |
+| REPL / JS 执行 | ✅ | ✅ | ✅ | ✅ |
+| 性能分析 | ✅ 插件 | ❌ | ❌ | ✅ |
+| 源码查看 | ✅ 插件 | ❌（第三方） | ✅ | ✅ |
+| 插件系统 | ✅ | ✅ | ✅ | ❌ |
+| Shadow DOM 隔离 | ✅ | ❌ | ❌ | N/A |
+| 零依赖 | ✅ | ❌（4 个依赖） | ✅（内置打包） | ❌（9 个依赖） |
+| TypeScript 原生 | ✅ | ✅ | ✅ | ❌ |
+| 深色主题 | ✅ | ✅ | ✅ | ✅ |
+| 移动端优化 | ✅ | ✅ | ✅ | ❌ |
+| 远程调试 | ❌ | ❌ | ❌ | ✅ |
+| 最后更新 | 2026 | 2023 | 2025 | 2025 |
+
+### 架构对比
+
+| 方面 | NextConsole | vConsole | Eruda | Chii |
+| --- | --- | --- | --- | --- |
+| 渲染方式 | Shadow DOM | `<div>` 插入 body | `<div>` 插入 body | Chrome DevTools |
+| CSS 隔离 | 完全隔离 (Shadow DOM) | 类名作用域 | 类名作用域 | iframe |
+| 构建格式 | ES + UMD 双格式 | 仅 UMD | 仅 UMD | 服务端 + 客户端 |
+| 框架依赖 | 无 | 无 | 无 | Node.js 服务器 |
+| 日志渲染 | 虚拟列表（万级） | DOM 追加 | DOM 追加 | DevTools 原生 |
+| 流式处理 | RAF 批量合并 | 无 | 无 | 无 |
 
 ## 快速开始
 
@@ -127,6 +176,32 @@ interface NextConsolePlugin {
   init?(api: PluginAPI): void;    // 安装时调用
   destroy?(): void;               // 销毁时调用
 }
+```
+
+### 内置插件
+
+NextConsole 附带两个官方插件：
+
+#### Source 插件
+
+查看页面所有脚本和样式表（外部引用 & 内联），支持完整源码查看：
+
+```js
+import NextConsole, { createSourcePlugin } from '@royalscome/nextconsole';
+
+const nc = new NextConsole();
+nc.use(createSourcePlugin());
+```
+
+#### Performance 插件
+
+核心性能指标（Web Vitals）、资源分布、长任务检测、自定义性能标记：
+
+```js
+import NextConsole, { createPerformancePlugin } from '@royalscome/nextconsole';
+
+const nc = new NextConsole();
+nc.use(createPerformancePlugin());
 ```
 
 ## 配置项
@@ -243,6 +318,10 @@ src/
 │   ├── storage.ts
 │   ├── system.ts
 │   └── plugin.ts          # 插件系统类型
+├── plugins/           # 内置插件
+│   ├── index.ts
+│   ├── source-plugin.ts   # 源码查看器
+│   └── performance-plugin.ts  # 性能分析
 └── index.ts           # 公共 API 入口
 ```
 
