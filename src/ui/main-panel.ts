@@ -3,12 +3,14 @@ import { ConsoleCore } from '../core/console-core';
 import { NetworkCore } from '../core/network-core';
 import { StorageCore } from '../core/storage-core';
 import { ElementCore } from '../core/element-core';
+import { ReplCore } from '../core/repl-core';
 import { FloatButton } from './float-button';
 import { ConsolePanel } from './console-panel';
 import { NetworkPanel } from './network-panel';
 import { StoragePanel } from './storage-panel';
 import { ElementPanel } from './element-panel';
 import { SystemPanel } from './system-panel';
+import { ReplPanel } from './repl-panel';
 import { THEME_CSS } from '../styles/theme';
 import { on, clamp } from '../utils/dom';
 
@@ -18,6 +20,7 @@ const TABS: { key: PanelTab; label: string }[] = [
   { key: 'storage', label: 'Storage' },
   { key: 'element', label: 'Element' },
   { key: 'system', label: 'System' },
+  { key: 'repl', label: 'REPL' },
 ];
 
 /**
@@ -37,6 +40,7 @@ export class MainPanel {
   private networkCore: NetworkCore;
   private storageCore: StorageCore;
   private elementCore: ElementCore;
+  private replCore: ReplCore;
 
   // UI modules
   private floatButton!: FloatButton;
@@ -45,6 +49,7 @@ export class MainPanel {
   private storagePanel?: StoragePanel;
   private elementPanel?: ElementPanel;
   private systemPanel?: SystemPanel;
+  private replPanel?: ReplPanel;
 
   // Config
   private config: NextConsoleConfig;
@@ -63,6 +68,7 @@ export class MainPanel {
     this.networkCore = new NetworkCore(config.network);
     this.storageCore = new StorageCore(config.storage);
     this.elementCore = new ElementCore();
+    this.replCore = new ReplCore();
   }
 
   /** Initialize everything */
@@ -215,6 +221,11 @@ export class MainPanel {
           this.systemPanel = new SystemPanel(pane);
         }
         break;
+      case 'repl':
+        if (!this.replPanel) {
+          this.replPanel = new ReplPanel(pane, this.replCore);
+        }
+        break;
     }
   }
 
@@ -306,11 +317,13 @@ export class MainPanel {
     this.storagePanel?.destroy();
     this.elementPanel?.destroy();
     this.systemPanel?.destroy();
+    this.replPanel?.destroy();
     this.floatButton.destroy();
     this.consoleCore.destroy();
     this.networkCore.destroy();
     this.storageCore.destroy();
     this.elementCore.destroy();
+    this.replCore.destroy();
     this.cleanups.forEach((fn) => fn());
     this.cleanups.length = 0;
     this.host.remove();

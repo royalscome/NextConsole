@@ -3,7 +3,7 @@ import type { NetworkOptions } from './network';
 import type { StorageOptions } from './storage';
 
 /** Tab panel types */
-export type PanelTab = 'console' | 'network' | 'storage' | 'element' | 'system';
+export type PanelTab = 'console' | 'network' | 'storage' | 'element' | 'system' | 'repl';
 
 /** NextConsole configuration */
 export interface NextConsoleConfig {

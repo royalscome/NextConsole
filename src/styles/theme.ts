@@ -577,4 +577,96 @@ export const THEME_CSS = `
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* REPL Panel */
+.nc-repl-output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0;
+}
+.nc-repl-row {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--nc-border);
+  font-family: var(--nc-font);
+  font-size: var(--nc-font-size);
+  word-break: break-all;
+  white-space: pre-wrap;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.4;
+}
+.nc-repl-row:hover {
+  background: var(--nc-bg-hover);
+}
+.nc-repl-input-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--nc-border);
+  background: var(--nc-bg-secondary);
+  flex-shrink: 0;
+}
+.nc-repl-prompt {
+  color: var(--nc-accent);
+  font-weight: bold;
+  font-family: var(--nc-font);
+  font-size: var(--nc-font-size);
+  line-height: 1.6;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.nc-repl-input {
+  flex: 1;
+  background: var(--nc-bg);
+  border: 1px solid var(--nc-border);
+  color: var(--nc-text);
+  padding: 4px 8px;
+  border-radius: var(--nc-radius);
+  font-size: var(--nc-font-size);
+  font-family: var(--nc-font);
+  outline: none;
+  resize: none;
+  line-height: 1.4;
+  min-height: 24px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.nc-repl-input:focus {
+  border-color: var(--nc-accent);
+}
+.nc-repl-run {
+  padding: 4px 12px;
+  background: var(--nc-accent);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  border-radius: var(--nc-radius);
+  font-size: 11px;
+  font-family: var(--nc-font);
+  font-weight: bold;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.nc-repl-run:hover {
+  background: var(--nc-accent-hover);
+}
+.nc-repl-code {
+  color: var(--nc-text);
+  flex: 1;
+}
+.nc-repl-result {
+  color: var(--nc-info);
+  flex: 1;
+}
+.nc-repl-err {
+  color: var(--nc-error);
+}
+.nc-repl-input .nc-repl-row.nc-repl-input {
+  color: var(--nc-text-secondary);
+}
 `;
