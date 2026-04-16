@@ -22,7 +22,7 @@
 ### CDN / UMD
 
 ```html
-<script src="https://unpkg.com/nextconsole/dist/nextconsole.umd.js"></script>
+<script src="https://unpkg.com/@royalscome/nextconsole/dist/nextconsole.umd.js"></script>
 <script>
   var nc = new NextConsole();
 </script>
@@ -31,11 +31,11 @@
 ### ES Module
 
 ```bash
-npm install nextconsole
+npm install @royalscome/nextconsole
 ```
 
 ```js
-import NextConsole from 'nextconsole';
+import NextConsole from '@royalscome/nextconsole';
 
 const nc = new NextConsole({
   defaultTab: 'console',
