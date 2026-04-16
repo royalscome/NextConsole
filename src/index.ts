@@ -15,6 +15,9 @@ export type {
   PerformanceMetrics,
 } from './types';
 
+/** Track singleton instance to prevent multiple hook conflicts */
+let _instance: NextConsole | null = null;
+
 /**
  * NextConsole - Next-generation front-end debugging console.
  *
@@ -38,6 +41,11 @@ export class NextConsole {
   private panel: MainPanel;
 
   constructor(config?: NextConsoleConfig) {
+    // Auto-destroy previous instance to prevent hook conflicts
+    if (_instance) {
+      _instance.destroy();
+    }
+    _instance = this;
     this.panel = new MainPanel(config);
     this.panel.init();
   }
@@ -106,6 +114,9 @@ export class NextConsole {
    * Safe to call in production to remove all traces.
    */
   destroy(): void {
+    if (_instance === this) {
+      _instance = null;
+    }
     this.panel.destroy();
   }
 }

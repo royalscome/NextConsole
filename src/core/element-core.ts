@@ -82,10 +82,11 @@ export class ElementCore {
   }
 
   private getSelector(el: Element): string {
-    if (el.id) return `#${el.id}`;
+    if (el.id) return `#${CSS.escape(el.id)}`;
     const tag = el.tagName.toLowerCase();
     if (el.className && typeof el.className === 'string') {
-      return `${tag}.${el.className.split(' ').filter(Boolean).join('.')}`;
+      const classes = el.className.split(' ').filter(Boolean).map(c => CSS.escape(c)).join('.');
+      return classes ? `${tag}.${classes}` : tag;
     }
     return tag;
   }

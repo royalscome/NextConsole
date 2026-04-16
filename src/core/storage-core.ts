@@ -44,19 +44,22 @@ export class StorageCore extends EventEmitter<StorageEvents> {
   }
 
   private readWebStorage(type: 'localStorage' | 'sessionStorage', filter?: string): StorageEntry[] {
-    const storage = type === 'localStorage' ? localStorage : sessionStorage;
     const entries: StorageEntry[] = [];
+    try {
+      const storage = type === 'localStorage' ? localStorage : sessionStorage;
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (key === null) continue;
+        if (filter && !key.toLowerCase().includes(filter.toLowerCase())) continue;
 
-    for (let i = 0; i < storage.length; i++) {
-      const key = storage.key(i);
-      if (key === null) continue;
-      if (filter && !key.toLowerCase().includes(filter.toLowerCase())) continue;
-
-      entries.push({
-        key,
-        value: storage.getItem(key) || '',
-        type,
-      });
+        entries.push({
+          key,
+          value: storage.getItem(key) || '',
+          type,
+        });
+      }
+    } catch {
+      // Storage may be unavailable (iframe cross-origin, privacy mode, etc.)
     }
 
     return entries;
@@ -72,13 +75,20 @@ export class StorageCore extends EventEmitter<StorageEvents> {
       const eqIndex = pair.indexOf('=');
       if (eqIndex < 0) continue;
       const key = pair.slice(0, eqIndex).trim();
-      const value = pair.slice(eqIndex + 1).trim();
+      const rawValue = pair.slice(eqIndex + 1).trim();
 
       if (filter && !key.toLowerCase().includes(filter.toLowerCase())) continue;
 
+      let value: string;
+      try {
+        value = decodeURIComponent(rawValue);
+      } catch {
+        value = rawValue;
+      }
+
       entries.push({
         key,
-        value: decodeURIComponent(value),
+        value,
         type: 'cookie',
       });
     }
@@ -94,46 +104,62 @@ export class StorageCore extends EventEmitter<StorageEvents> {
     secure?: boolean;
     sameSite?: string;
   }): void {
-    if (type === 'localStorage') {
-      localStorage.setItem(key, value);
-    } else if (type === 'sessionStorage') {
-      sessionStorage.setItem(key, value);
-    } else if (type === 'cookie') {
-      let cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-      if (cookieOptions?.domain) cookie += `; domain=${cookieOptions.domain}`;
-      if (cookieOptions?.path) cookie += `; path=${cookieOptions.path}`;
-      else cookie += `; path=/`;
-      if (cookieOptions?.expires) cookie += `; expires=${cookieOptions.expires}`;
-      if (cookieOptions?.secure) cookie += `; secure`;
-      if (cookieOptions?.sameSite) cookie += `; SameSite=${cookieOptions.sameSite}`;
-      document.cookie = cookie;
+    try {
+      if (type === 'localStorage') {
+        localStorage.setItem(key, value);
+      } else if (type === 'sessionStorage') {
+        sessionStorage.setItem(key, value);
+      } else if (type === 'cookie') {
+        let cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+        if (cookieOptions?.domain) cookie += `; domain=${cookieOptions.domain}`;
+        if (cookieOptions?.path) cookie += `; path=${cookieOptions.path}`;
+        else cookie += `; path=/`;
+        if (cookieOptions?.expires) cookie += `; expires=${cookieOptions.expires}`;
+        if (cookieOptions?.secure) cookie += `; secure`;
+        if (cookieOptions?.sameSite) cookie += `; SameSite=${cookieOptions.sameSite}`;
+        document.cookie = cookie;
+      }
+    } catch {
+      // Storage may be unavailable
     }
     this.emit('update');
   }
 
   /** Remove a storage item */
   removeItem(type: StorageType, key: string): void {
-    if (type === 'localStorage') {
-      localStorage.removeItem(key);
-    } else if (type === 'sessionStorage') {
-      sessionStorage.removeItem(key);
-    } else if (type === 'cookie') {
-      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    try {
+      if (type === 'localStorage') {
+        localStorage.removeItem(key);
+      } else if (type === 'sessionStorage') {
+        sessionStorage.removeItem(key);
+      } else if (type === 'cookie') {
+        // Try common paths to ensure deletion works
+        const paths = ['/', window.location.pathname];
+        for (const path of paths) {
+          document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+        }
+      }
+    } catch {
+      // Storage may be unavailable
     }
     this.emit('update');
   }
 
   /** Clear all entries of a specific type */
   clearAll(type: StorageType): void {
-    if (type === 'localStorage') {
-      localStorage.clear();
-    } else if (type === 'sessionStorage') {
-      sessionStorage.clear();
-    } else if (type === 'cookie') {
-      const entries = this.readCookies();
-      for (const entry of entries) {
-        this.removeItem('cookie', entry.key);
+    try {
+      if (type === 'localStorage') {
+        localStorage.clear();
+      } else if (type === 'sessionStorage') {
+        sessionStorage.clear();
+      } else if (type === 'cookie') {
+        const entries = this.readCookies();
+        for (const entry of entries) {
+          this.removeItem('cookie', entry.key);
+        }
       }
+    } catch {
+      // Storage may be unavailable
     }
     this.emit('update');
   }

@@ -2,7 +2,6 @@ import type { LogEntry, LogLevel } from '../types';
 import type { ConsoleCore } from '../core/console-core';
 import { formatTime } from '../utils/time';
 import { highlightJSON } from '../utils/json';
-import { safeStringify } from '../utils/json';
 import { escapeHTML } from '../utils/dom';
 
 const MAX_RENDER = 500;
@@ -19,6 +18,7 @@ export class ConsolePanel {
   private activeFilters = new Set<LogLevel>();
   private searchText = '';
   private scrollLocked = true;
+  private renderRAF: number | null = null;
   private cleanups: (() => void)[] = [];
 
   constructor(container: HTMLElement, core: ConsoleCore) {
@@ -105,16 +105,24 @@ export class ConsolePanel {
 
     // Core events
     const unsub1 = this.core.on('entry', () => {
-      this.refreshEntries();
+      this.scheduleRefresh();
     });
     const unsub2 = this.core.on('streamUpdate', () => {
-      this.refreshEntries();
+      this.scheduleRefresh();
     });
     const unsub3 = this.core.on('clear', () => {
-      this.refreshEntries();
+      this.scheduleRefresh();
     });
 
     this.cleanups.push(unsub1, unsub2, unsub3);
+  }
+
+  private scheduleRefresh(): void {
+    if (this.renderRAF !== null) return;
+    this.renderRAF = requestAnimationFrame(() => {
+      this.renderRAF = null;
+      this.refreshEntries();
+    });
   }
 
   private refreshEntries(): void {
@@ -164,6 +172,9 @@ export class ConsolePanel {
   }
 
   destroy(): void {
+    if (this.renderRAF !== null) {
+      cancelAnimationFrame(this.renderRAF);
+    }
     this.cleanups.forEach((fn) => fn());
     this.cleanups.length = 0;
     this.container.innerHTML = '';

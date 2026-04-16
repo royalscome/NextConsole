@@ -32,16 +32,24 @@ export function getSystemInfo(): SystemInfo {
 }
 
 function getPerformanceMetrics(): PerformanceMetrics | undefined {
-  if (!performance || !performance.timing) return undefined;
+  if (typeof performance === 'undefined') return undefined;
 
-  const timing = performance.timing;
   const metrics: PerformanceMetrics = {};
 
-  if (timing.loadEventEnd > 0) {
-    metrics.pageLoadTime = timing.loadEventEnd - timing.navigationStart;
-  }
-  if (timing.domContentLoadedEventEnd > 0) {
-    metrics.domContentLoaded = timing.domContentLoadedEventEnd - timing.navigationStart;
+  // Use Navigation Timing Level 2 (performance.timing is deprecated)
+  try {
+    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    if (navEntries.length > 0) {
+      const nav = navEntries[0];
+      if (nav.loadEventEnd > 0) {
+        metrics.pageLoadTime = Math.round(nav.loadEventEnd - nav.startTime);
+      }
+      if (nav.domContentLoadedEventEnd > 0) {
+        metrics.domContentLoaded = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+      }
+    }
+  } catch {
+    // Navigation Timing API not available
   }
 
   // Paint timings via PerformanceObserver entries

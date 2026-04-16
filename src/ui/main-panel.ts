@@ -67,37 +67,46 @@ export class MainPanel {
 
   /** Initialize everything */
   init(): void {
-    const target = this.config.target || document.body;
-    target.appendChild(this.host);
+    const mount = () => {
+      const target = this.config.target || document.body;
+      target.appendChild(this.host);
 
-    // Inject styles
-    const style = document.createElement('style');
-    style.textContent = THEME_CSS;
-    this.shadow.appendChild(style);
+      // Inject styles
+      const style = document.createElement('style');
+      style.textContent = THEME_CSS;
+      this.shadow.appendChild(style);
 
-    // Create float button
-    this.floatButton = new FloatButton(
-      this.shadow,
-      () => this.toggle(),
-      this.config.buttonPosition,
-    );
+      // Create float button
+      this.floatButton = new FloatButton(
+        this.shadow,
+        () => this.toggle(),
+        this.config.buttonPosition,
+      );
 
-    // Create panel
-    this.createPanel();
+      // Create panel
+      this.createPanel();
 
-    // Init cores
-    this.consoleCore.init();
-    this.networkCore.init();
-    this.storageCore.init();
-    this.elementCore.init();
+      // Init cores
+      this.consoleCore.init();
+      this.networkCore.init();
+      this.storageCore.init();
+      this.elementCore.init();
 
-    // Apply initial panel height
-    if (this.config.panelHeight) {
-      const h = clamp(this.config.panelHeight, 0.1, 0.9);
-      this.panelEl.style.setProperty('--nc-panel-height', `${h * 100}vh`);
+      // Apply initial panel height
+      if (this.config.panelHeight) {
+        const h = clamp(this.config.panelHeight, 0.1, 0.9);
+        this.panelEl.style.setProperty('--nc-panel-height', `${h * 100}vh`);
+      }
+
+      this.config.onReady?.();
+    };
+
+    // Ensure DOM is ready before mounting
+    if (document.body) {
+      mount();
+    } else {
+      document.addEventListener('DOMContentLoaded', mount, { once: true });
     }
-
-    this.config.onReady?.();
   }
 
   private createPanel(): void {
@@ -139,11 +148,6 @@ export class MainPanel {
       const pane = document.createElement('div');
       pane.className = `nc-tab-pane${tab.key === this.activeTab ? ' nc-tab-pane-active' : ''}`;
       pane.dataset.ncPane = tab.key;
-      pane.style.display = 'flex';
-      pane.style.flexDirection = 'column';
-      if (tab.key !== this.activeTab) {
-        pane.style.display = 'none';
-      }
       this.tabContentEl.appendChild(pane);
     }
     this.panelEl.appendChild(this.tabContentEl);
@@ -171,11 +175,9 @@ export class MainPanel {
       (el as HTMLElement).classList.toggle('nc-tab-active', (el as HTMLElement).dataset.ncTab === tab);
     });
 
-    // Update panes
+    // Update panes (CSS handles display via nc-tab-pane-active class)
     this.shadow.querySelectorAll('.nc-tab-pane').forEach((el) => {
-      const isActive = (el as HTMLElement).dataset.ncPane === tab;
-      (el as HTMLElement).style.display = isActive ? 'flex' : 'none';
-      (el as HTMLElement).classList.toggle('nc-tab-pane-active', isActive);
+      (el as HTMLElement).classList.toggle('nc-tab-pane-active', (el as HTMLElement).dataset.ncPane === tab);
     });
 
     this.activatePanel(tab);

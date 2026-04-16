@@ -16,6 +16,24 @@ const DEFAULT_OPTIONS: NetworkOptions = {
   hookWebSocket: true,
 };
 
+const MAX_MESSAGES = 1000;
+
+/** Serialize request body for display */
+function serializeBody(body: unknown): unknown {
+  if (body === null || body === undefined) return null;
+  if (typeof body === 'string') return body;
+  if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) return body.toString();
+  if (typeof FormData !== 'undefined' && body instanceof FormData) {
+    const obj: Record<string, string> = {};
+    body.forEach((v, k) => { obj[k] = typeof v === 'string' ? v : `[File: ${(v as File).name}]`; });
+    return obj;
+  }
+  if (typeof Blob !== 'undefined' && body instanceof Blob) return `[Blob: ${body.size} bytes]`;
+  if (body instanceof ArrayBuffer) return `[ArrayBuffer: ${body.byteLength} bytes]`;
+  if (ArrayBuffer.isView(body)) return `[${body.constructor.name}: ${body.byteLength} bytes]`;
+  return String(body);
+}
+
 /**
  * NetworkCore hooks into fetch, XMLHttpRequest, and EventSource
  * to capture network activity including SSE streams.
@@ -26,6 +44,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
   private originalFetch: typeof window.fetch | null = null;
   private originalXHR: typeof XMLHttpRequest.prototype.open | null = null;
   private originalXHRSend: typeof XMLHttpRequest.prototype.send | null = null;
+  private originalXHRSetHeader: typeof XMLHttpRequest.prototype.setRequestHeader | null = null;
   private originalEventSource: typeof EventSource | null = null;
   private originalWebSocket: typeof WebSocket | null = null;
   private hooked = false;
@@ -65,7 +84,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
         method,
         url,
         requestHeaders,
-        requestBody: init?.body ?? null,
+        requestBody: serializeBody(init?.body),
         status: 0,
         statusText: '',
         responseHeaders: {},
@@ -122,6 +141,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
     const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
     this.originalXHR = origOpen;
     this.originalXHRSend = origSend;
+    this.originalXHRSetHeader = origSetHeader;
 
     XMLHttpRequest.prototype.open = function (
       this: XMLHttpRequest & { _nc_entry?: NetworkEntry; _nc_headers?: Record<string, string> },
@@ -167,7 +187,7 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
       const entry = this._nc_entry;
       if (entry) {
         entry.startTime = performance.now();
-        entry.requestBody = body ?? null;
+        entry.requestBody = serializeBody(body);
         self.addEntry(entry);
 
         this.addEventListener('loadend', () => {
@@ -253,8 +273,8 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
       // Capture all messages (including named events via onmessage)
       const origAddEventListener = es.addEventListener.bind(es);
       (es as any).addEventListener = function (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        if (type !== 'open' && type !== 'error') {
-          // Wrap to capture named events
+        if (type !== 'open' && type !== 'error' && type !== 'message') {
+          // Wrap to capture named events (message events are captured by the internal handler below)
           const wrappedListener = function (e: Event) {
             const me = e as MessageEvent;
             const sseEvent: SSEEvent = {
@@ -271,6 +291,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
               event: type === 'message' ? undefined : type,
               size: typeof me.data === 'string' ? me.data.length : 0,
             };
+            if (entry.messages!.length >= MAX_MESSAGES) {
+              entry.messages!.splice(0, entry.messages!.length - MAX_MESSAGES + 100);
+            }
             entry.messages!.push(msg);
             self.emit('update', entry);
 
@@ -285,7 +308,8 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
         return origAddEventListener(type, listener, options);
       };
 
-      es.addEventListener('message', ((e: MessageEvent) => {
+      // Capture all messages via original addEventListener to avoid double recording
+      origAddEventListener('message', ((e: MessageEvent) => {
         const sseEvent: SSEEvent = {
           data: e.data,
           timestamp: Date.now(),
@@ -298,6 +322,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
           timestamp: Date.now(),
           size: typeof e.data === 'string' ? e.data.length : 0,
         };
+        if (entry.messages!.length >= MAX_MESSAGES) {
+          entry.messages!.splice(0, entry.messages!.length - MAX_MESSAGES + 100);
+        }
         entry.messages!.push(msg);
         self.emit('update', entry);
       }) as EventListener);
@@ -365,6 +392,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
           timestamp: Date.now(),
           size: typeof e.data === 'string' ? e.data.length : (e.data as ArrayBuffer)?.byteLength || 0,
         };
+        if (entry.messages!.length >= MAX_MESSAGES) {
+          entry.messages!.splice(0, entry.messages!.length - MAX_MESSAGES + 100);
+        }
         entry.messages!.push(msg);
         self.emit('update', entry);
       });
@@ -395,6 +425,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
           timestamp: Date.now(),
           size: typeof data === 'string' ? data.length : (data as ArrayBuffer)?.byteLength || 0,
         };
+        if (entry.messages!.length >= MAX_MESSAGES) {
+          entry.messages!.splice(0, entry.messages!.length - MAX_MESSAGES + 100);
+        }
         entry.messages!.push(msg);
         self.emit('update', entry);
         return origSend(data);
@@ -442,6 +475,9 @@ export class NetworkCore extends EventEmitter<NetworkEvents> {
     }
     if (this.originalXHRSend) {
       XMLHttpRequest.prototype.send = this.originalXHRSend;
+    }
+    if (this.originalXHRSetHeader) {
+      XMLHttpRequest.prototype.setRequestHeader = this.originalXHRSetHeader;
     }
     if (this.originalEventSource) {
       (window as any).EventSource = this.originalEventSource;

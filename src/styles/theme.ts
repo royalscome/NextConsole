@@ -154,10 +154,11 @@ export const THEME_CSS = `
   top: 0; left: 0; right: 0; bottom: 0;
   overflow: auto;
   display: none;
+  flex-direction: column;
   -webkit-overflow-scrolling: touch;
 }
 .nc-tab-pane.nc-tab-pane-active {
-  display: block;
+  display: flex;
 }
 
 /* Toolbar */

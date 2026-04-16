@@ -26,7 +26,7 @@ export class ConsoleCore extends EventEmitter<ConsoleEvents> {
   private hooked = false;
   private streamBuffers = new Map<string, LogEntry>();
   private flushTimer: ReturnType<typeof requestAnimationFrame> | null = null;
-  private pendingFlush = false;
+  private pendingStreamEntries = new Set<LogEntry>();
 
   constructor(options?: Partial<ConsoleOptions>) {
     super();
@@ -115,11 +115,14 @@ export class ConsoleCore extends EventEmitter<ConsoleEvents> {
 
   /** Schedule a batched UI update for stream entries (avoids UI freeze) */
   private scheduleStreamFlush(entry: LogEntry): void {
-    if (this.pendingFlush) return;
-    this.pendingFlush = true;
+    this.pendingStreamEntries.add(entry);
+    if (this.flushTimer !== null) return;
     this.flushTimer = requestAnimationFrame(() => {
-      this.pendingFlush = false;
-      this.emit('streamUpdate', entry);
+      this.flushTimer = null;
+      for (const e of this.pendingStreamEntries) {
+        this.emit('streamUpdate', e);
+      }
+      this.pendingStreamEntries.clear();
     });
   }
 
@@ -131,6 +134,32 @@ export class ConsoleCore extends EventEmitter<ConsoleEvents> {
       }
       if (arg instanceof HTMLElement) {
         return `<${arg.tagName.toLowerCase()}>`;
+      }
+      if (arg instanceof Date) {
+        return arg.toISOString();
+      }
+      if (arg instanceof RegExp) {
+        return arg.toString();
+      }
+      if (arg instanceof Map) {
+        try {
+          return { __type: 'Map', entries: JSON.parse(JSON.stringify([...arg])) };
+        } catch {
+          return `Map(${arg.size})`;
+        }
+      }
+      if (arg instanceof Set) {
+        try {
+          return { __type: 'Set', values: JSON.parse(JSON.stringify([...arg])) };
+        } catch {
+          return `Set(${arg.size})`;
+        }
+      }
+      if (typeof arg === 'symbol') {
+        return arg.toString();
+      }
+      if (typeof arg === 'function') {
+        return `ƒ ${arg.name || 'anonymous'}()`;
       }
       // For objects, store a snapshot
       if (typeof arg === 'object' && arg !== null) {
@@ -190,6 +219,7 @@ export class ConsoleCore extends EventEmitter<ConsoleEvents> {
     if (this.flushTimer !== null) {
       cancelAnimationFrame(this.flushTimer);
     }
+    this.pendingStreamEntries.clear();
     this.removeAllListeners();
   }
 }
