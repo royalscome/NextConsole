@@ -12,11 +12,11 @@
     "isolatedModules": true,
     "declaration": true,
     "declarationDir": "dist",
+    "rootDir": "src",
     "outDir": "dist",
     "sourceMap": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],

@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import dts from 'vite-plugin-dts';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -9,6 +12,9 @@ export default defineConfig({
       rollupTypes: true,
     }),
   ],
+  server: {
+    open: '/examples/index.html',
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
