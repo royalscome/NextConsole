@@ -146,20 +146,26 @@ export class MainPanel {
     const tabBar = document.createElement('div');
     tabBar.className = 'nc-tab-bar';
 
-    for (const tab of TABS) {
-      const tabEl = document.createElement('div');
-      tabEl.className = `nc-tab${tab.key === this.activeTab ? ' nc-tab-active' : ''}`;
-      tabEl.textContent = tab.label;
-      tabEl.dataset.ncTab = tab.key;
-      tabBar.appendChild(tabEl);
-    }
-
-    // Close button
+    // Close button (fixed on the right, outside the scrollable area)
     const closeBtn = document.createElement('button');
     closeBtn.className = 'nc-close-btn';
     closeBtn.textContent = '✕';
     closeBtn.addEventListener('click', () => this.hide());
     tabBar.appendChild(closeBtn);
+
+    // Scrollable tabs wrapper
+    const tabsScroll = document.createElement('div');
+    tabsScroll.className = 'nc-tabs-scroll';
+
+    for (const tab of TABS) {
+      const tabEl = document.createElement('div');
+      tabEl.className = `nc-tab${tab.key === this.activeTab ? ' nc-tab-active' : ''}`;
+      tabEl.textContent = tab.label;
+      tabEl.dataset.ncTab = tab.key;
+      tabsScroll.appendChild(tabEl);
+    }
+
+    tabBar.appendChild(tabsScroll);
 
     this.panelEl.appendChild(tabBar);
 
@@ -392,14 +398,13 @@ export class MainPanel {
       this.pluginTabs.push({ key, label: plugin.tab.label });
 
       // Add tab button
-      const tabBar = this.shadow.querySelector('.nc-tab-bar') as HTMLElement;
-      if (tabBar) {
-        const closeBtn = tabBar.querySelector('.nc-close-btn');
+      const tabsScroll = this.shadow.querySelector('.nc-tabs-scroll') as HTMLElement;
+      if (tabsScroll) {
         const tabEl = document.createElement('div');
         tabEl.className = 'nc-tab';
         tabEl.textContent = plugin.tab.label;
         tabEl.dataset.ncTab = key;
-        tabBar.insertBefore(tabEl, closeBtn);
+        tabsScroll.appendChild(tabEl);
       }
 
       // Add tab pane
