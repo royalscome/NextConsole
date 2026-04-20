@@ -103,8 +103,13 @@ export const THEME_CSS = `
   display: flex;
   background: var(--nc-bg-secondary);
   border-bottom: 1px solid var(--nc-border);
-  overflow-x: auto;
   flex-shrink: 0;
+  align-items: stretch;
+}
+.nc-tabs-scroll {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .nc-tab {
@@ -121,7 +126,6 @@ export const THEME_CSS = `
   flex-shrink: 0;
 }
 .nc-close-btn {
-  margin-left: auto;
   padding: 4px 10px;
   cursor: pointer;
   color: var(--nc-text-secondary);
